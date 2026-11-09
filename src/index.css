@@ -1,0 +1,850 @@
+@import "tailwindcss";
+
+@theme {
+  --font-display: "Cinzel", "Times New Roman", serif;
+  --font-serif: "EB Garamond", Georgia, serif;
+}
+
+:root {
+  color-scheme: dark;
+}
+
+html {
+  min-width: 320px;
+  background: #0f0e0c;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background:
+    radial-gradient(65rem 42rem at 50% -12%, rgba(214, 168, 78, 0.08), transparent 62%),
+    #0f0e0c;
+  color: #e9e3d8;
+  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: rgba(214, 168, 78, 0.3);
+}
+
+button {
+  cursor: pointer;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: #2b2722;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.app-glow {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(38rem 30rem at 12% 18%, rgba(214, 168, 78, 0.06), transparent 62%),
+    radial-gradient(34rem 28rem at 92% 82%, rgba(124, 92, 178, 0.05), transparent 62%);
+}
+
+header,
+main,
+footer {
+  position: relative;
+  z-index: 1;
+}
+
+.hero {
+  position: relative;
+  z-index: 40;
+}
+
+/* ------------------------------------------------------------------ */
+/* Card stage — 750 × 1050 px, 300 DPI (63.5 × 88.9 mm)                */
+/* ------------------------------------------------------------------ */
+
+.card-scaler {
+  --card-scale: 0.62;
+  position: relative;
+  width: calc(750px * var(--card-scale));
+  height: calc(1050px * var(--card-scale));
+  flex-shrink: 0;
+}
+
+.card-scaler > .mtg-card,
+.card-scaler > .empty-card {
+  transform: scale(var(--card-scale));
+  transform-origin: top left;
+}
+
+@media (max-width: 639px) {
+  .card-scaler {
+    --card-scale: 0.42;
+  }
+}
+
+@media (min-width: 1280px) {
+  .card-scaler {
+    --card-scale: 0.68;
+  }
+}
+
+@media (min-width: 1536px) {
+  .card-scaler {
+    --card-scale: 0.72;
+  }
+}
+
+.mtg-card {
+  --frame-paper: #f3ecd9;
+  --frame-paper-2: #e8ddc4;
+  --frame-ink: #1c1710;
+  --frame-muted: #6f6452;
+  --frame-line: rgba(28, 23, 16, 0.28);
+  --frame-accent-2: var(--frame-accent);
+  --frame-accent-gradient: linear-gradient(
+    135deg,
+    var(--frame-accent),
+    var(--frame-accent-2)
+  );
+  --frame-title-ink: #191510;
+  position: relative;
+  width: 750px;
+  height: 1050px;
+  overflow: hidden;
+  border-radius: 34px;
+  background:
+    radial-gradient(
+      120% 70% at 50% -10%,
+      color-mix(in srgb, var(--frame-accent) 13%, transparent),
+      transparent 55%
+    ),
+    linear-gradient(155deg, var(--frame-paper), var(--frame-paper-2));
+  color: var(--frame-ink);
+  font-family: "EB Garamond", Georgia, serif;
+  box-shadow:
+    0 32px 80px -32px rgba(0, 0, 0, 0.9),
+    0 0 0 1px rgba(255, 255, 255, 0.04);
+  isolation: isolate;
+}
+
+.mtg-card--dark {
+  --frame-paper: #171512;
+  --frame-paper-2: #211d18;
+  --frame-ink: #f4eddc;
+  --frame-muted: #a89d8a;
+  --frame-line: rgba(244, 237, 220, 0.24);
+}
+
+/* ------------------------------------------------------------------ */
+/* Template 1993 — old school, cadre coloré et panneau parchemin        */
+/* ------------------------------------------------------------------ */
+
+.mtg-card--classic {
+  --frame-paper: #f6efdc;
+  --frame-paper-2: #e9dfc6;
+  --frame-ink: #191510;
+  --frame-muted: #5b5040;
+  --frame-line: rgba(25, 21, 16, 0.38);
+  --classic-parchment:
+    radial-gradient(70% 42% at 15% 6%, rgba(255, 255, 255, 0.55), transparent 64%),
+    radial-gradient(44% 30% at 84% 17%, rgba(150, 112, 54, 0.13), transparent 72%),
+    radial-gradient(52% 36% at 28% 88%, rgba(138, 99, 47, 0.14), transparent 74%),
+    radial-gradient(38% 24% at 73% 66%, rgba(122, 86, 40, 0.09), transparent 72%),
+    repeating-linear-gradient(92deg, rgba(112, 82, 40, 0.045) 0 1px, transparent 1px 6px),
+    repeating-linear-gradient(2deg, rgba(112, 82, 40, 0.035) 0 2px, transparent 2px 11px),
+    linear-gradient(178deg, #fcf5e2, #f3e7c9 58%, #e7d7b4);
+  border-radius: 28px;
+  background:
+    repeating-linear-gradient(
+      115deg,
+      rgba(255, 255, 255, 0.05) 0 2px,
+      transparent 2px 9px
+    ),
+    radial-gradient(
+      120% 80% at 50% 0%,
+      color-mix(in srgb, var(--frame-accent) 58%, white),
+      var(--frame-accent) 52%,
+      color-mix(in srgb, var(--frame-accent) 62%, black)
+    );
+  /* Les reliefs internes survivent à l'export, contrairement à l'ombre portée. */
+  --classic-inset-shadow:
+    inset 0 3px 1px rgba(255, 255, 255, 0.4),
+    inset 0 -4px 6px rgba(0, 0, 0, 0.42),
+    inset 3px 0 2px rgba(255, 255, 255, 0.18),
+    inset -3px 0 3px rgba(0, 0, 0, 0.28),
+    inset 0 0 0 1px rgba(0, 0, 0, 0.45);
+  box-shadow:
+    0 32px 80px -32px rgba(0, 0, 0, 0.9),
+    var(--classic-inset-shadow);
+  font-family: "EB Garamond", Georgia, serif;
+}
+
+/* Pendant l'export, l'ombre portée est retirée : elle ne fait pas partie de la carte. */
+.mtg-card.is-exporting {
+  box-shadow: none;
+}
+
+/* Le relief 1993 est intrinsèque à la carte : il doit rester dans le PNG. */
+.mtg-card.mtg-card--classic.is-exporting {
+  box-shadow: var(--classic-inset-shadow);
+}
+
+/* Anneau biseauté : lumière en haut/gauche, ombre en bas/droite. */
+.mtg-card--classic::before {
+  position: absolute;
+  inset: 8px;
+  z-index: 0;
+  border: 1px solid rgba(25, 16, 8, 0.34);
+  border-radius: 21px;
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.42),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.32),
+    inset 2px 0 0 rgba(255, 255, 255, 0.22),
+    inset -2px 0 0 rgba(0, 0, 0, 0.22);
+  content: "";
+  pointer-events: none;
+}
+
+/* Surface du cadre, légèrement plus sombre que le bord extérieur. */
+.mtg-card--classic .mtg-inner-border {
+  inset: 22px;
+  border: 2px solid rgba(25, 16, 8, 0.78);
+  border-radius: 16px;
+  background:
+    repeating-linear-gradient(
+      115deg,
+      rgba(255, 255, 255, 0.045) 0 2px,
+      transparent 2px 9px
+    ),
+    radial-gradient(
+      120% 90% at 50% -12%,
+      rgba(255, 255, 255, 0.3),
+      transparent 58%
+    ),
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--frame-accent) 86%, white),
+      var(--frame-accent) 52%,
+      color-mix(in srgb, var(--frame-accent) 80%, black)
+    );
+  box-shadow:
+    inset 0 2px 1px rgba(255, 255, 255, 0.34),
+    inset 0 -3px 5px rgba(0, 0, 0, 0.3),
+    inset 2px 0 2px rgba(255, 255, 255, 0.14),
+    inset -2px 0 3px rgba(0, 0, 0, 0.22),
+    0 1px 0 rgba(255, 255, 255, 0.16);
+}
+
+/* Plaque de titre embossée. */
+.mtg-card--classic .mtg-title {
+  top: 38px;
+  right: 56px;
+  left: 56px;
+  height: 60px;
+  padding: 0 16px;
+  border: 1px solid rgba(25, 16, 8, 0.72);
+  border-radius: 3px;
+  background:
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.34),
+      rgba(255, 255, 255, 0.06) 44%,
+      rgba(0, 0, 0, 0.16)
+    ),
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--frame-accent) 72%, white),
+      var(--frame-accent) 54%,
+      color-mix(in srgb, var(--frame-accent) 80%, black)
+    );
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.44),
+    inset 0 -2px 3px rgba(0, 0, 0, 0.36),
+    0 2px 3px rgba(0, 0, 0, 0.26);
+}
+
+.mtg-card--classic .mtg-name {
+  color: var(--frame-title-ink);
+  font-family: "EB Garamond", Georgia, serif;
+  font-weight: 600;
+  letter-spacing: 0.015em;
+  text-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.18),
+    0 -1px 0 rgba(0, 0, 0, 0.18);
+}
+
+.mtg-card--classic .mtg-mana {
+  font-size: 30px;
+  filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.22));
+}
+
+/* Fenêtre d'illustration en creux, avec liseré intérieur. */
+.mtg-card--classic .mtg-art {
+  top: 104px;
+  right: 56px;
+  left: 56px;
+  height: 380px;
+  border: 2px solid rgba(25, 16, 8, 0.86);
+  border-radius: 2px;
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.18),
+    0 3px 5px rgba(35, 22, 8, 0.42),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.22);
+}
+
+.mtg-card--classic .mtg-art-frame {
+  border: 2px solid rgba(28, 18, 8, 0.62);
+  border-radius: 0;
+}
+
+/* Bandeau de type et boîte de texte : parchemin texturé. */
+.mtg-card--classic .mtg-type {
+  top: 488px;
+  right: 56px;
+  left: 56px;
+  height: 48px;
+  padding: 0 16px;
+  border: 1px solid rgba(66, 47, 22, 0.62);
+  border-radius: 2px;
+  background: var(--classic-parchment);
+  box-shadow:
+    inset 0 2px 4px rgba(88, 62, 28, 0.2),
+    inset 0 -2px 2px rgba(255, 255, 255, 0.5),
+    0 1px 2px rgba(30, 20, 8, 0.24);
+}
+
+.mtg-card--classic .mtg-type-text {
+  color: #1b1610;
+  font-family: "EB Garamond", Georgia, serif;
+  font-weight: 600;
+  font-variant: small-caps;
+  letter-spacing: 0.03em;
+}
+
+.mtg-card--classic .mtg-text {
+  top: 536px;
+  right: 56px;
+  left: 56px;
+  height: 412px;
+  padding: 16px 20px;
+  border: 1px solid rgba(66, 47, 22, 0.6);
+  border-radius: 2px;
+  background: var(--classic-parchment);
+  box-shadow:
+    inset 0 3px 6px rgba(88, 62, 28, 0.2),
+    inset 0 -2px 2px rgba(255, 255, 255, 0.46),
+    inset 2px 0 3px rgba(88, 62, 28, 0.07),
+    0 1px 2px rgba(30, 20, 8, 0.2);
+}
+
+.mtg-card--classic .mtg-oracle {
+  color: #1b1610;
+  line-height: 1.28;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.36);
+}
+
+.mtg-card--classic .mtg-bottom {
+  bottom: 34px;
+}
+
+.mtg-card--classic .mtg-meta {
+  color: color-mix(in srgb, var(--frame-title-ink) 74%, transparent);
+  font-family: "EB Garamond", Georgia, serif;
+  letter-spacing: 0.08em;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.18);
+}
+
+.mtg-card--classic .mtg-proxy {
+  border-color: color-mix(in srgb, var(--frame-title-ink) 36%, transparent);
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--frame-title-ink) 7%, transparent);
+}
+
+.mtg-card--classic .mtg-pt {
+  min-width: 92px;
+  border: 2px solid rgba(25, 15, 5, 0.84);
+  border-radius: 3px;
+  background: var(--classic-parchment);
+  color: #191510;
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.66),
+    inset 0 -3px 4px rgba(78, 53, 22, 0.26),
+    0 2px 3px rgba(30, 20, 8, 0.34);
+  font-family: "EB Garamond", Georgia, serif;
+  font-size: 38px;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.55);
+}
+
+.mtg-card--classic .mtg-loyalty {
+  border: 2px solid rgba(25, 15, 5, 0.78);
+  border-radius: 4px;
+  background: var(--classic-parchment);
+  clip-path: none;
+  color: #17130e;
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.6),
+    inset 0 -3px 4px rgba(78, 53, 22, 0.25),
+    0 2px 3px rgba(30, 20, 8, 0.3);
+  font-family: "EB Garamond", Georgia, serif;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+/* ------------------------------------------------------------------ */
+/* Template 2026 — contemporain, plein cadre sombre et accents vifs     */
+/* ------------------------------------------------------------------ */
+
+.mtg-card--modern {
+  --frame-paper: #0d1014;
+  --frame-paper-2: #151a21;
+  --frame-ink: #f2f5f8;
+  --frame-muted: #9aa6b4;
+  --frame-line: rgba(242, 245, 248, 0.16);
+  border-radius: 30px;
+  background:
+    radial-gradient(
+      95% 55% at 20% 0%,
+      color-mix(in srgb, var(--frame-accent) 26%, transparent),
+      transparent 64%
+    ),
+    radial-gradient(
+      85% 55% at 80% 2%,
+      color-mix(in srgb, var(--frame-accent-2) 22%, transparent),
+      transparent 66%
+    ),
+    radial-gradient(
+      80% 50% at 50% 100%,
+      color-mix(in srgb, var(--frame-accent-2) 9%, transparent),
+      transparent 70%
+    ),
+    linear-gradient(170deg, #121820, #090b0e 58%, #0c1015);
+  color: var(--frame-ink);
+}
+
+.mtg-card--modern .mtg-inner-border {
+  inset: 14px;
+  border: 1px solid color-mix(in srgb, var(--frame-accent) 30%, transparent);
+  border-radius: 20px;
+  box-shadow:
+    inset 0 0 70px rgba(0, 0, 0, 0.35),
+    0 0 24px -10px color-mix(in srgb, var(--frame-accent-2) 55%, transparent);
+}
+
+/* Bandeau de titre : le dégradé bicolore transparaît sous un voile sombre. */
+.mtg-card--modern .mtg-title {
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 104px;
+  padding: 0 44px;
+  gap: 18px;
+  border-bottom: 1px solid color-mix(in srgb, var(--frame-accent) 38%, transparent);
+  background:
+    linear-gradient(
+      180deg,
+      rgba(9, 12, 16, 0.5),
+      rgba(9, 12, 16, 0.84) 58%,
+      #0b0e12 100%
+    ),
+    var(--frame-accent-gradient);
+}
+
+.mtg-card--modern .mtg-title::after {
+  position: absolute;
+  right: 0;
+  bottom: -1px;
+  left: 0;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--frame-accent) 16%,
+    var(--frame-accent-2) 84%,
+    transparent 100%
+  );
+  content: "";
+  opacity: 0.9;
+  pointer-events: none;
+}
+
+.mtg-card--modern .mtg-name {
+  color: #f8fafc;
+  letter-spacing: 0.015em;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.55);
+}
+
+.mtg-card--modern .mtg-mana {
+  font-size: 30px;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.45));
+}
+
+.mtg-card--modern .mtg-art {
+  top: 104px;
+  right: 0;
+  left: 0;
+  height: 430px;
+  border: 0;
+  border-radius: 0;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.mtg-card--modern .mtg-art-frame {
+  border: 0;
+}
+
+.mtg-card--modern .mtg-type {
+  top: 540px;
+  right: 44px;
+  left: 44px;
+  height: 54px;
+  padding: 0 16px;
+  border: 1px solid color-mix(in srgb, var(--frame-accent) 40%, transparent);
+  border-radius: 8px;
+  background: linear-gradient(
+    120deg,
+    color-mix(in srgb, var(--frame-accent) 16%, transparent),
+    color-mix(in srgb, var(--frame-accent-2) 16%, transparent)
+  );
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--frame-accent) 20%, transparent),
+    0 0 18px -10px color-mix(in srgb, var(--frame-accent-2) 40%, transparent);
+}
+
+.mtg-card--modern .mtg-type-text {
+  color: #eef3f8;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+.mtg-card--modern .mtg-text {
+  top: 606px;
+  right: 44px;
+  left: 44px;
+  height: 338px;
+  padding: 20px 22px;
+  border: 1px solid rgba(242, 245, 248, 0.14);
+  border-radius: 14px;
+  background:
+    linear-gradient(
+      155deg,
+      color-mix(in srgb, var(--frame-accent) 7%, transparent),
+      rgba(255, 255, 255, 0.03) 42%,
+      color-mix(in srgb, var(--frame-accent-2) 6%, transparent)
+    );
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.mtg-card--modern .mtg-oracle {
+  color: #e7edf3;
+  line-height: 1.34;
+}
+
+.mtg-card--modern .mtg-bottom {
+  right: 44px;
+  bottom: 32px;
+  left: 44px;
+  height: 58px;
+}
+
+.mtg-card--modern .mtg-proxy {
+  border-color: color-mix(in srgb, var(--frame-accent) 45%, transparent);
+  color: color-mix(in srgb, var(--frame-accent) 85%, white);
+}
+
+.mtg-card--modern .mtg-pt {
+  min-width: 96px;
+  height: 58px;
+  border: 1px solid color-mix(in srgb, var(--frame-accent) 70%, transparent);
+  border-radius: 999px;
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--frame-accent) 34%, #0d1117),
+    color-mix(in srgb, var(--frame-accent-2) 34%, #0d1117)
+  );
+  box-shadow:
+    0 0 22px -6px color-mix(in srgb, var(--frame-accent) 35%, transparent),
+    0 0 30px -10px color-mix(in srgb, var(--frame-accent-2) 40%, transparent);
+  font-size: 38px;
+}
+
+.mtg-card--modern .mtg-loyalty {
+  width: 68px;
+  height: 62px;
+  border: 1px solid color-mix(in srgb, var(--frame-accent) 70%, transparent);
+  background: linear-gradient(160deg, var(--frame-accent), var(--frame-accent-2));
+  box-shadow:
+    0 0 20px color-mix(in srgb, var(--frame-accent) 20%, transparent),
+    0 0 26px -8px color-mix(in srgb, var(--frame-accent-2) 45%, transparent);
+  font-size: 34px;
+}
+
+.mtg-inner-border {
+  position: absolute;
+  inset: 16px;
+  border: 1px solid var(--frame-line);
+  border-radius: 22px;
+  pointer-events: none;
+}
+
+.mtg-title {
+  position: absolute;
+  top: 46px;
+  right: 64px;
+  left: 64px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  height: 60px;
+}
+
+.mtg-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  font-family: "Cinzel", "Times New Roman", serif;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.mtg-mana {
+  flex: 0 0 auto;
+  font-size: 31px;
+  line-height: 1;
+}
+
+.mtg-art {
+  position: absolute;
+  top: 122px;
+  right: 58px;
+  left: 58px;
+  height: 394px;
+  overflow: hidden;
+  border: 2px solid var(--frame-ink);
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--frame-ink) 4%, transparent);
+}
+
+.mtg-art img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform-origin: center;
+  user-select: none;
+}
+
+.mtg-art-frame {
+  position: absolute;
+  inset: 0;
+  border: 2px solid color-mix(in srgb, var(--frame-paper) 62%, transparent);
+  border-radius: 3px;
+  pointer-events: none;
+}
+
+.mtg-art-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  height: 100%;
+  padding: 24px;
+  color: var(--frame-muted);
+  text-align: center;
+  background: repeating-linear-gradient(
+    135deg,
+    transparent 0 22px,
+    color-mix(in srgb, var(--frame-ink) 5%, transparent) 22px 24px
+  );
+}
+
+.mtg-art-empty-title {
+  font-family: "Cinzel", "Times New Roman", serif;
+  font-size: 26px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.mtg-art-empty-hint {
+  font-size: 17px;
+  opacity: 0.75;
+}
+
+.mtg-type {
+  position: absolute;
+  top: 532px;
+  right: 58px;
+  left: 58px;
+  display: flex;
+  align-items: center;
+  height: 46px;
+  padding: 0 12px;
+  border-top: 2px solid var(--frame-ink);
+  border-bottom: 2px solid var(--frame-ink);
+  background: color-mix(in srgb, var(--frame-accent) 16%, transparent);
+}
+
+.mtg-type-text {
+  width: 100%;
+  overflow: hidden;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.mtg-text {
+  position: absolute;
+  top: 586px;
+  right: 58px;
+  left: 58px;
+  height: 336px;
+  overflow: hidden;
+  padding: 16px 18px;
+  border: 1px solid var(--frame-line);
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--frame-paper) 55%, transparent);
+}
+
+.mtg-oracle {
+  height: 100%;
+  overflow: hidden;
+  line-height: 1.3;
+  white-space: pre-wrap;
+  word-break: break-word;
+  hyphens: auto;
+}
+
+.mtg-inline-symbol {
+  margin: 0 1px;
+  font-size: 0.95em;
+  vertical-align: -0.18em;
+}
+
+.mana-fallback {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.1em;
+  padding: 0 0.25em;
+  border: 1px solid currentColor;
+  border-radius: 0.3em;
+  font-size: 0.72em;
+  font-weight: 600;
+  line-height: 1.2;
+  vertical-align: 0.12em;
+}
+
+.mtg-bottom {
+  position: absolute;
+  right: 58px;
+  bottom: 42px;
+  left: 58px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  height: 56px;
+}
+
+.mtg-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  color: var(--frame-muted);
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  font-size: 16px;
+  letter-spacing: 0.1em;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+.mtg-proxy {
+  padding: 4px 9px;
+  border: 1px solid color-mix(in srgb, var(--frame-muted) 60%, transparent);
+  border-radius: 999px;
+  font-size: 14px;
+  letter-spacing: 0.18em;
+}
+
+.mtg-pt {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 86px;
+  height: 56px;
+  padding: 0 14px;
+  border: 2px solid var(--frame-ink);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--frame-accent) 22%, transparent);
+  box-shadow: inset 0 -4px 0 color-mix(in srgb, var(--frame-ink) 10%, transparent);
+  font-family: "Cinzel", "Times New Roman", serif;
+  font-size: 40px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.mtg-loyalty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 66px;
+  height: 60px;
+  background: var(--frame-accent);
+  color: #17130e;
+  clip-path: polygon(50% 0, 100% 16%, 100% 72%, 50% 100%, 0 72%, 0 16%);
+  font-family: "Cinzel", "Times New Roman", serif;
+  font-size: 36px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+/* ------------------------------------------------------------------ */
+/* Empty state                                                         */
+/* ------------------------------------------------------------------ */
+
+.empty-card {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 750px;
+  height: 1050px;
+  border: 2px dashed rgba(168, 158, 140, 0.28);
+  border-radius: 34px;
+  background:
+    radial-gradient(80% 55% at 50% 30%, rgba(214, 168, 78, 0.08), transparent 70%),
+    linear-gradient(160deg, rgba(33, 30, 26, 0.85), rgba(18, 16, 14, 0.9));
+  box-shadow:
+    0 32px 80px -32px rgba(0, 0, 0, 0.9),
+    inset 0 0 80px rgba(0, 0, 0, 0.35);
+}
+
+.empty-card-inner {
+  max-width: 520px;
+  padding: 64px;
+  text-align: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
