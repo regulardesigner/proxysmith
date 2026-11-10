@@ -72,7 +72,8 @@ Skills (loaded on demand):
   preview.
 - `card-export` — card rendering, PNG/PDF export, artwork compositing, print geometry, smoke/pixel
   checks.
-- `pr-delivery` — atomic Conventional Commit, PR description, verification matrix, merge checklist.
+- `pr-delivery` — atomic gitmoji + Conventional Commit, Gitflow branches, PR description,
+  verification matrix, merge checklist.
 - `skeptical-review` — falsification protocol: formalize an assumption, define what would disprove
   it, attack it with code/data/tests, and return `FALSIFIED`, `NOT FALSIFIED`, or `INCONCLUSIVE`.
 
@@ -479,23 +480,31 @@ documented here and in the README.
 - One commit = **one coherent, atomic change**. Do not mix a feature, a formatting refactor, and a
   fix in the same commit.
 - Commit messages and PR titles in **English**, imperative mood.
-- **Conventional Commits** format:
+- **gitmoji + Conventional Commits** format:
 
   ```
-  <type>(<scope>): <imperative, lowercase subject, no period>
+  <gitmoji> <type>(<scope>): <imperative, lowercase subject, no period>
   ```
+
+  The gitmoji is a Unicode emoji from [gitmoji.dev](https://gitmoji.dev) followed by a space;
+  `:shortcode:` is accepted when the tooling does not render emoji. The emoji prefixes the
+  Conventional Commit header; it does not replace `type` or `scope`.
 
   Types: `feat`, `fix`, `refactor`, `test`, `docs`, `style`, `perf`, `build`, `ci`, `chore`.
   Common scopes: `search`, `card`, `editor`, `art`, `export`, `theme`, `store`, `a11y`, `deps`,
   `docs`.
 
+  gitmoji mapping: `feat` ✨, `fix` 🐛, `refactor` ♻️, `test` ✅, `docs` 📝, `style` 💄, `perf` ⚡️,
+  `build` 🔨, `ci` 👷, `chore` 🔧; plus ♿️ accessibility, 🔒️ security, ⬆️ dependency upgrade,
+  🔥 deletion, 🔖 release, 💥 breaking change.
+
   Examples:
 
   ```
-  feat(theme): add a manual frame color override
-  fix(export): keep the artwork framing identical to the preview
-  test(mana): cover tap and untap glyph mapping
-  docs(agents): document accessibility and Lighthouse rules
+  ✨ feat(theme): add a manual frame color override
+  🐛 fix(export): keep the artwork framing identical to the preview
+  ✅ test(mana): cover tap and untap glyph mapping
+  📝 docs(agents): document accessibility and Lighthouse rules
   ```
 
 - Subject ≤ 72 characters, imperative, no initial capital, no trailing period. The body explains
@@ -512,11 +521,23 @@ documented here and in the README.
 
 ### Branches and pull requests
 
-- Work on a dedicated branch, never directly on `main`. Names in English, kebab-case:
-  `feat/frame-color`, `fix/export-artwork`, `docs/agents-accessibility`, `chore/deps`.
-- One PR = **one topic**, opened against `main` after updating to the latest version. If it exceeds
-  ~400 useful lines, split it or justify.
-- PR title in Conventional Commits format, identical to the main commit.
+Gitflow branching model:
+
+- `main` — production; only receives `release/*` and `hotfix/*` merges plus `v<version>` tags.
+  Never commit directly to it.
+- `develop` — integration; finished features and bugfixes land here. Never commit directly to it.
+- `feature/<topic>` — from `develop`, merged back into `develop`.
+- `bugfix/<topic>` — from `develop`, merged back into `develop`.
+- `release/<version>` — from `develop`, merged into `main`, back-merged into `develop`, tagged on
+  `main`.
+- `hotfix/<version>` — from `main`, merged into `main`, back-merged into `develop`, tagged on
+  `main`.
+
+Names are English kebab-case after the prefix, for example `feature/dark-frame` or
+`bugfix/search-focus`. One PR = **one topic**, opened against the branch's Gitflow target
+(`develop` for feature/bugfix, `main` for release/hotfix) after updating to the latest version. If
+it exceeds ~400 useful lines, split it or justify. PR title uses the same gitmoji + Conventional
+Commits format as its main commit.
 - Mandatory description:
 
   ```md
@@ -550,7 +571,9 @@ documented here and in the README.
 - Screenshots and `tmp/` artifacts are attached to the PR, not committed.
 - Explicitly verify before merging: no WotC artwork or asset, OFL fonts only, `PROXY` notice and
   disclaimer intact, no exposed secret.
-- **Squash merge** when the platform allows it, to keep a readable history.
+- **Merge with `--no-ff`** to preserve the Gitflow topology; do not squash feature branches, since
+  that flattens history and breaks the release and hotfix back-merge points. Tag releases on
+  `main` and back-merge `release/*` and `hotfix/*` into `develop`.
 - A PR with red tests, a console error, a Lighthouse Accessibility regression, or a blocking
   accessibility defect must not be merged.
 
