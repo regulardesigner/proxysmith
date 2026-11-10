@@ -35,6 +35,7 @@ npm run typecheck            # strict TypeScript, no emit
 npm run build                # typecheck + production build
 npm run preview              # serve the production build (Lighthouse)
 npm run smoke                # Playwright E2E flow, dev server required
+npm run check:conventions    # warning-only branch/commit naming check
 ```
 
 - Node.js 22+.
@@ -45,6 +46,8 @@ npm run smoke                # Playwright E2E flow, dev server required
   server.
 - Before considering a task done: `npm run typecheck`, `npm test`, `npm run build`. Add
   `npm run smoke` whenever a change touches the UI, card rendering, exports, or CSS.
+- `npm run check:conventions` verifies branch names and commit headers but only prints warnings and
+  always exits 0. It is a reminder, never a merge gate.
 
 ## Skills and subagents
 
@@ -524,48 +527,23 @@ documented here and in the README.
 
 Gitflow branching model:
 
-- `main` — production; only receives `release/*` and `hotfix/*` merges plus `v<version>` tags.
+- `master` — production; only receives `release/*` and `hotfix/*` merges plus `v<version>` tags.
   Never commit directly to it.
 - `develop` — integration; finished features and bugfixes land here. Never commit directly to it.
 - `feature/<topic>` — from `develop`, merged back into `develop`.
 - `bugfix/<topic>` — from `develop`, merged back into `develop`.
-- `release/<version>` — from `develop`, merged into `main`, back-merged into `develop`, tagged on
-  `main`.
-- `hotfix/<version>` — from `main`, merged into `main`, back-merged into `develop`, tagged on
-  `main`.
+- `release/<version>` — from `develop`; PR into `master`, then a `master` → `develop` PR
+  back-merges it; tagged on `master`.
+- `hotfix/<version>` — from `master`; PR into `master`, then a `master` → `develop` PR back-merges
+  it; tagged on `master`.
 
 Names are English kebab-case after the prefix, for example `feature/dark-frame` or
 `bugfix/search-focus`. One PR = **one topic**, opened against the branch's Gitflow target
-(`develop` for feature/bugfix, `main` for release/hotfix) after updating to the latest version. If
+(`develop` for feature/bugfix, `master` for release/hotfix) after updating to the latest version. If
 it exceeds ~400 useful lines, split it or justify. PR title uses the same gitmoji + Conventional
 Commits format as its main commit.
-- Mandatory description:
-
-  ```md
-  ## Context
-  Why this change, problem, or need.
-
-  ## Change
-  What was done, with the key files or modules.
-
-  ## Verification
-  - [ ] `npm run typecheck`
-  - [ ] `npm test`
-  - [ ] `npm run build`
-  - [ ] `npm run smoke` (UI / card / export / CSS)
-  - [ ] Lighthouse Accessibility with no regression
-  - [ ] Complete keyboard flow verified
-  - [ ] Documentation updated
-
-  ## Accessibility
-  Impact and Lighthouse results (scores + fixed items).
-
-  ## Screenshots
-  Before / after for any visual change (attached files, not committed).
-
-  ## Risks
-  Side effects, rollback, points to test manually.
-  ```
+- Mandatory description: fill every section of `.github/pull_request_template.md`. It is the
+  canonical PR body; skills and agents link to it instead of restating it.
 
 - Self-review the diff before opening the PR: no dead code, no `console.log`, no unjustified TODO,
   no disabled test, no hardcoded value.
@@ -574,9 +552,41 @@ Commits format as its main commit.
   disclaimer intact, no exposed secret.
 - **Merge with `--no-ff`** to preserve the Gitflow topology; do not squash feature branches, since
   that flattens history and breaks the release and hotfix back-merge points. Tag releases on
-  `main` and back-merge `release/*` and `hotfix/*` into `develop`.
+  `master` after the release/hotfix PR, then open a `master` → `develop` PR to back-merge; never
+  merge locally into a protected branch.
 - A PR with red tests, a console error, a Lighthouse Accessibility regression, or a blocking
   accessibility defect must not be merged.
+
+### Review and merge process
+
+Every change reaches `develop` or `master` through a pull request. Direct pushes to these branches
+are disabled in GitHub once the settings in
+[`.github/GITHUB_SETTINGS.md`](./.github/GITHUB_SETTINGS.md) are applied.
+
+Required on every pull request:
+
+1. **CI green** — the `CI / Typecheck, tests and build` job runs `npm ci`, `npm run typecheck`,
+   `npm test`, and `npm run build`.
+2. **Local checks for UI changes** — `npm run smoke` for UI, card, export, or CSS changes, plus
+   Lighthouse Accessibility when the change touches colors, typography, or interactions.
+3. **Self-review** — read the full diff. For a non-trivial change, run the `reviewer` subagent and
+   resolve its `Blocker` and `Major` findings, or justify why they do not apply.
+4. **PR description** — fill `.github/pull_request_template.md`; keep the verification checkboxes
+   accurate.
+
+Solo mode: the repository owner may merge their own PR. No human approval is required while the
+project has a single maintainer, but the PR and the green CI checks are mandatory. When a second
+maintainer joins, require one approval on `develop` and `master` as described in the settings file.
+
+- The `Conventions` workflow checks branch names, commit headers, PR titles, and Gitflow targets,
+  emits `::warning::` annotations, and always succeeds. It is deliberately **not** a required check
+  and must never block a merge.
+- Keep merge commits: merge with `--no-ff`; squash and rebase merging are disabled in GitHub.
+- Release and hotfix back-merges also go through PRs: `release/x → master`, then `master →
+  develop`; tag `master` after the first merge.
+- Delete the merged topic branch; head-branch auto-deletion is enabled in the settings.
+- `develop` and `master` are protected against force pushes and deletion. Never rewrite or delete
+  them.
 
 ## Definition of done
 
@@ -588,6 +598,8 @@ Commits format as its main commit.
 - The complete keyboard flow works and Lighthouse Accessibility does not regress.
 - Native HTML semantics are preferred and no redundant ARIA has been added.
 - No console errors, no accessibility regression, UI text in French.
+- CI is green on the pull request, and convention warnings were reviewed even though they never
+  block a merge.
 - No WotC artwork or asset added; OFL fonts only; `PROXY` notice intact.
 - README/PLAN/AGENTS updated if commands, architecture, templates, accessibility, or preferences
   change.

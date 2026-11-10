@@ -9,6 +9,7 @@
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "check:conventions": "node scripts/check-conventions.mjs",
     "smoke": "node scripts/smoke.mjs"
   },
   "dependencies": {
