@@ -226,18 +226,19 @@ async function drawArtwork(
 
   const artStyle = getComputedStyle(artElement);
   const imageElement = artElement.querySelector<HTMLImageElement>('.mtg-art-img');
-  const border = imageElement
-    ? imageElement.offsetLeft
-    : Number.parseFloat(artStyle.borderLeftWidth) || 0;
+  // offsetLeft est relatif au bord de padding, pas au bord de la bordure : il faut
+  // donc ajouter l'épaisseur de bordure du cadre pour retrouver l'origine du contenu.
+  const borderLeft = Number.parseFloat(artStyle.borderLeftWidth) || 0;
+  const borderTop = Number.parseFloat(artStyle.borderTopWidth) || 0;
 
-  const x = artElement.offsetLeft + border;
-  const y = artElement.offsetTop + (imageElement ? imageElement.offsetTop : border);
+  const x = artElement.offsetLeft + borderLeft;
+  const y = artElement.offsetTop + borderTop;
   const width = imageElement?.offsetWidth || artElement.clientWidth;
   const height = imageElement?.offsetHeight || artElement.clientHeight;
   if (!width || !height) return;
 
   const outerRadius = Number.parseFloat(artStyle.borderTopLeftRadius) || 0;
-  const clipRadius = Math.max(0, outerRadius - border);
+  const clipRadius = Math.max(0, outerRadius - borderLeft);
 
   const source = await loadImage(art.dataUrl);
 
