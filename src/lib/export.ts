@@ -12,6 +12,19 @@ export const SHEET_COLUMNS = 3;
 export const SHEET_ROWS = 3;
 export const SHEET_CARD_COUNT = SHEET_COLUMNS * SHEET_ROWS;
 
+/**
+ * Safari peut interrompre un téléchargement si son URL blob est révoquée par un
+ * timer. On garde donc l'URL de la planche précédente jusqu'au prochain export
+ * (ou jusqu'au déchargement de la page, qui libère le blob).
+ */
+let pendingDownloadUrl: string | null = null;
+
+function revokePendingDownloadUrl(): void {
+  if (!pendingDownloadUrl) return;
+  URL.revokeObjectURL(pendingDownloadUrl);
+  pendingDownloadUrl = null;
+}
+
 export type SheetRect = {
   x: number;
   y: number;
@@ -336,6 +349,8 @@ export async function exportCardsPdf(
   name: string,
   art: Artwork | null,
 ): Promise<void> {
+  revokePendingDownloadUrl();
+
   const canvas = await renderCardCanvas(node, art);
   const dataUrl = canvas.toDataURL('image/png');
 
@@ -383,9 +398,9 @@ export async function exportCardsPdf(
   const bytes = await pdf.save();
   const blob = new Blob([bytes as BlobPart], { type: 'application/pdf' });
   const url = URL.createObjectURL(blob);
+  pendingDownloadUrl = url;
   const link = document.createElement('a');
   link.download = `${slugify(name)}-planche-a4.pdf`;
   link.href = url;
   link.click();
-  window.setTimeout(() => URL.revokeObjectURL(url), 1_000);
 }
