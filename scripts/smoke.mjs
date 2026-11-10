@@ -13,12 +13,35 @@ page.on('console', (message) => {
 });
 page.on('pageerror', (error) => errors.push(`pageerror: ${error.message}`));
 
+async function assertSearchFocus(label) {
+  const activeId = await page.evaluate(() => document.activeElement?.id);
+  if (activeId !== 'card-search') {
+    throw new Error(`Le focus ne revient pas au champ de recherche (${label}) : ${activeId}`);
+  }
+}
+
 await page.goto('http://localhost:5173', { waitUntil: 'networkidle' });
 await page.screenshot({ path: 'tmp/01-home.png', fullPage: true });
 
 const combobox = page.getByRole('combobox');
 await combobox.fill('Foudre');
 await page.getByRole('option').first().waitFor({ timeout: 15000 });
+
+// L'option active doit être reliée au combobox pour être annoncée par les lecteurs d'écran.
+const activeDescendant = await combobox.getAttribute('aria-activedescendant');
+if (!activeDescendant) throw new Error('aria-activedescendant absent du combobox');
+if ((await page.locator(`[id="${activeDescendant}"]`).count()) === 0) {
+  throw new Error('aria-activedescendant ne pointe pas vers une option');
+}
+
+// Les options sont pilotées au clavier depuis le combobox : elles ne doivent pas être des tab stops.
+const optionTabIndexes = await page
+  .getByRole('option')
+  .evaluateAll((options) => options.map((option) => option.tabIndex));
+if (optionTabIndexes.some((tabIndex) => tabIndex !== -1)) {
+  throw new Error(`Les options doivent être hors du flux de tabulation : ${optionTabIndexes}`);
+}
+
 console.log('--- FIRST RESULT ---');
 console.log(await page.getByRole('option').first().innerText());
 await page.screenshot({ path: 'tmp/02-results.png', fullPage: true });
@@ -26,6 +49,7 @@ await page.screenshot({ path: 'tmp/02-results.png', fullPage: true });
 await page.getByRole('option', { name: /^Foudre/ }).first().click();
 await page.locator('.mtg-card').waitFor();
 await page.waitForTimeout(600);
+await assertSearchFocus('sélection souris');
 await page.screenshot({ path: 'tmp/03-card.png', fullPage: true });
 
 const cardText = await page.locator('.mtg-card').innerText();
@@ -224,6 +248,74 @@ if (artState.offsetWidth === 0 || artState.offsetHeight === 0) {
 }
 await page.screenshot({ path: 'tmp/04-art.png', fullPage: true });
 
+// Erreur d'import : le message doit être relié au déclencheur pour être annoncé avec lui.
+await page.locator('input[type="file"]').setInputFiles({
+  name: 'note.txt',
+  mimeType: 'text/plain',
+  buffer: Buffer.from('not an image'),
+});
+await page.locator('#art-upload-error').waitFor({ timeout: 5000 });
+const uploadError = await page.evaluate(() => {
+  const trigger = [...document.querySelectorAll('button')].find(
+    (button) => button.getAttribute('aria-describedby') === 'art-upload-error',
+  );
+  return {
+    text: document.querySelector('#art-upload-error')?.textContent?.trim() ?? '',
+    describedBy: trigger?.getAttribute('aria-describedby') ?? null,
+  };
+});
+console.log('--- UPLOAD ERROR ---', JSON.stringify(uploadError));
+if (!uploadError.text.includes('Format')) throw new Error("Message d'erreur d'import absent");
+if (uploadError.describedBy !== 'art-upload-error') {
+  throw new Error("L'erreur d'import n'est pas reliée au bouton d'upload");
+}
+
+// Export 1993 : la classe d'export retire l'ombre portée mais garde les reliefs internes.
+await page.getByRole('button', { name: /1993/ }).click();
+await page.waitForTimeout(300);
+await page.evaluate(() => {
+  const card = document.querySelector('.mtg-card');
+  window.__classicExport = { sawClass: false, shadow: null };
+  const observer = new MutationObserver(() => {
+    if (card.classList.contains('is-exporting')) {
+      window.__classicExport.sawClass = true;
+      window.__classicExport.shadow = getComputedStyle(card).boxShadow;
+    }
+  });
+  observer.observe(card, { attributes: true, attributeFilter: ['class'] });
+  window.__classicExportObserver = observer;
+});
+const classicDownloadPromise = page.waitForEvent('download', { timeout: 30000 });
+await page.getByRole('button', { name: /Télécharger le PNG/ }).click();
+const classicDownload = await classicDownloadPromise;
+await classicDownload.saveAs('tmp/export-classic.png');
+const classicProbe = await page.evaluate(() => {
+  window.__classicExportObserver?.disconnect();
+  return window.__classicExport;
+});
+console.log('--- CLASSIC EXPORT ---');
+console.log(
+  JSON.stringify({
+    sawClass: classicProbe.sawClass,
+    shadow: classicProbe.shadow?.slice(0, 160) ?? null,
+  }),
+);
+if (!classicProbe.sawClass) {
+  throw new Error("Classe is-exporting absente pendant l'export 1993");
+}
+if (!classicProbe.shadow?.includes('inset')) {
+  throw new Error("Relief du cadre 1993 perdu à l'export");
+}
+if (classicProbe.shadow?.includes('32px 80px')) {
+  throw new Error("Ombre portée conservée à l'export 1993");
+}
+const classicPng = readFileSync('tmp/export-classic.png');
+if (classicPng.readUInt32BE(16) !== 750 || classicPng.readUInt32BE(20) !== 1050) {
+  throw new Error('Export 1993 de mauvaise taille');
+}
+await page.getByRole('button', { name: /Signature/ }).click();
+await page.waitForTimeout(250);
+
 await page.getByRole('button', { name: 'Sombre' }).click();
 await page.waitForTimeout(300);
 await page.screenshot({ path: 'tmp/05-dark.png', fullPage: true });
@@ -332,10 +424,12 @@ await page.getByRole('button', { name: /Signature/ }).click();
 await page.waitForTimeout(250);
 
 // Symboles de mana dans le texte oracle + polices réellement chargées.
+await page.mouse.move(0, 0);
 await combobox.fill('Sol Ring');
 await page.getByRole('option').first().waitFor({ timeout: 15000 });
-await page.getByRole('option').first().click();
+await combobox.press('Enter');
 await page.waitForTimeout(500);
+await assertSearchFocus('sélection clavier');
 const fontsAndSymbols = await page.evaluate(() => ({
   manaFont: document.fonts.check('16px Mana'),
   cinzel: document.fonts.check('16px Cinzel'),
@@ -376,6 +470,49 @@ if (!planeswalker.nameFits) throw new Error('Le nom déborde');
 if (!planeswalker.typeFits) throw new Error('La ligne de type déborde');
 if (planeswalker.loyalty !== '3') throw new Error('Loyauté manquante');
 if (planeswalker.powerToughness !== null) throw new Error('P/T affiché sur un planeswalker');
+
+// « Nouvelle carte » est démonté au reset : le focus doit revenir au champ de recherche.
+await page.getByRole('button', { name: 'Nouvelle carte' }).click();
+await page.waitForTimeout(300);
+await assertSearchFocus('réinitialisation');
+
+// États du combobox : replié tant qu'aucune listbox n'existe, déplié avec sa cible.
+const collapsedSearch = await page.evaluate(() => {
+  const input = document.querySelector('[role="combobox"]');
+  return {
+    expanded: input?.getAttribute('aria-expanded'),
+    controls: input?.getAttribute('aria-controls'),
+    listboxes: document.querySelectorAll('[role="listbox"]').length,
+  };
+});
+console.log('--- COMBOBOX COLLAPSED ---', JSON.stringify(collapsedSearch));
+if (
+  collapsedSearch.expanded !== 'false' ||
+  collapsedSearch.controls !== null ||
+  collapsedSearch.listboxes !== 0
+) {
+  throw new Error(`Combobox replié incohérent : ${JSON.stringify(collapsedSearch)}`);
+}
+
+await combobox.fill('Sol Ring');
+await page.getByRole('option').first().waitFor({ timeout: 15000 });
+const expandedSearch = await page.evaluate(() => {
+  const input = document.querySelector('[role="combobox"]');
+  const controls = input?.getAttribute('aria-controls');
+  return {
+    expanded: input?.getAttribute('aria-expanded'),
+    controls,
+    controlsExists: controls ? Boolean(document.getElementById(controls)) : false,
+  };
+});
+console.log('--- COMBOBOX EXPANDED ---', JSON.stringify(expandedSearch));
+if (
+  expandedSearch.expanded !== 'true' ||
+  expandedSearch.controls !== 'card-search-results' ||
+  !expandedSearch.controlsExists
+) {
+  throw new Error(`Combobox déplié incohérent : ${JSON.stringify(expandedSearch)}`);
+}
 
 console.log('--- ERRORS ---');
 console.log(errors.length ? errors.join('\n') : 'none');
