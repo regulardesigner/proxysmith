@@ -124,7 +124,7 @@ export function SearchPanel() {
           autoComplete="off"
           spellCheck={false}
           role="combobox"
-          aria-expanded={showDropdown}
+          aria-expanded={listboxVisible}
           aria-controls={listboxVisible ? 'card-search-results' : undefined}
           aria-activedescendant={
             activeCard ? `card-search-option-${activeCard.scryfallId}` : undefined
@@ -211,6 +211,7 @@ export function SearchPanel() {
                   id={`card-search-option-${card.scryfallId}`}
                   type="button"
                   role="option"
+                  tabIndex={-1}
                   aria-selected={index === safeActiveIndex}
                   onMouseDown={(event) => event.preventDefault()}
                   onMouseEnter={() => setActiveIndex(index)}
