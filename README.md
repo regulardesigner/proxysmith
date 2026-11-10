@@ -137,6 +137,22 @@ public/favicon.svg
 PLAN.md              # plan d'implémentation et roadmap
 ```
 
+## Contribuer
+
+Le projet suit Gitflow : `master` (production), `develop` (intégration), et des branches
+`feature/<sujet>` ou `bugfix/<sujet>` créées depuis `develop`. Toute modification passe par une pull
+request vers `develop` (ou vers `master` pour `release/*` et `hotfix/*`), avec la CI verte
+(`typecheck`, tests, build).
+
+Le contrôle des noms de branche et des messages de commit est **non bloquant** : le workflow
+`Conventions` produit des avertissements, mais ne peut pas empêcher une fusion. Les tests de fumée
+Playwright (`npm run smoke`) et Lighthouse restent locaux car ils nécessitent un navigateur et un
+serveur.
+
+Le modèle de PR, les workflows et la checklist des réglages GitHub à appliquer manuellement sont
+dans [`.github/`](./.github/). Les conventions de commit (gitmoji + Conventional Commits), de
+vérification et de fusion (`--no-ff`) sont détaillées dans [`AGENTS.md`](./AGENTS.md).
+
 ## Impression
 
 - Imprimer à **100 %** (« taille réelle »), sans ajustement automatique.

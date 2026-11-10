@@ -18,6 +18,8 @@ npm test
 npm run build
 ```
 
+`npm run check:conventions` is available as a local reminder for branch names and commit headers.
+
 Add, depending on the change:
 
 - `npm run smoke` — UI, card, export, or CSS change.
@@ -85,27 +87,27 @@ Refs: #123
 
 ProxySmith follows [Gitflow](https://nvie.com/posts/a-successful-git-branching-model/):
 
-- `main` — production. Only receives `release/*` and `hotfix/*` merges plus `v<version>` tags.
+- `master` — production. Only receives `release/*` and `hotfix/*` merges plus `v<version>` tags.
   Never commit directly to it.
 - `develop` — integration. Finished features and bugfixes land here. Never commit directly to it.
 - `feature/<topic>` — new work, from `develop`, merged back into `develop`.
 - `bugfix/<topic>` — non-urgent fix, from `develop`, merged back into `develop`.
-- `release/<version>` — release stabilization, from `develop`, into `main`, back-merged into
-  `develop`, tagged on `main`.
-- `hotfix/<version>` — production emergency, from `main`, into `main`, back-merged into
-  `develop`, tagged on `main`.
+- `release/<version>` — release stabilization, from `develop`; PR into `master`, then a `master` →
+  `develop` PR back-merges it; tagged on `master`.
+- `hotfix/<version>` — production emergency, from `master`; PR into `master`, then a `master` →
+  `develop` PR back-merges it; tagged on `master`.
 
 | Branch | From | PR target | Back-merge | Example |
 |---|---|---|---|---|
 | `feature/<topic>` | `develop` | `develop` | — | `feature/dark-frame` |
 | `bugfix/<topic>` | `develop` | `develop` | — | `bugfix/search-focus` |
-| `release/<version>` | `develop` | `main` | `main` → `develop` | `release/0.2.0` |
-| `hotfix/<version>` | `main` | `main` | `main` → `develop` | `hotfix/0.1.1` |
+| `release/<version>` | `develop` | `master` | `master` → `develop` | `release/0.2.0` |
+| `hotfix/<version>` | `master` | `master` | `master` → `develop` | `hotfix/0.1.1` |
 
 Rules:
 
 - English kebab-case after the prefix; the topic is short and descriptive.
-- Never branch a feature from `main`, and never open a feature PR against `main`.
+- Never branch a feature from `master`, and never open a feature PR against `master`.
 - Merge with `--no-ff` to preserve the topology Gitflow relies on. Do not squash feature branches:
   squashing flattens history and breaks the release and hotfix back-merge points.
 - `git pull --ff-only` from the base branch before opening the PR.
@@ -124,70 +126,48 @@ git push -u origin feature/dark-frame       # open PR into develop
 
 # release
 git switch develop
+git pull --ff-only
 git switch -c release/0.2.0
 # ... bump version and changelog, final QA ...
-git switch main
-git merge --no-ff release/0.2.0
+git push -u origin release/0.2.0            # open PR into master, merge --no-ff
+git switch master
+git pull --ff-only
 git tag -a v0.2.0 -m "v0.2.0"
-git switch develop
-git merge --no-ff release/0.2.0
-git branch -d release/0.2.0
+git push origin v0.2.0
+# open a master -> develop PR, merge --no-ff (back-merge)
 
 # hotfix
-git switch main
+git switch master
+git pull --ff-only
 git switch -c hotfix/0.1.1
 # ... fix + tests ...
-git switch main
-git merge --no-ff hotfix/0.1.1
+git push -u origin hotfix/0.1.1             # open PR into master, merge --no-ff
+git switch master
+git pull --ff-only
 git tag -a v0.1.1 -m "v0.1.1"
-git switch develop
-git merge --no-ff hotfix/0.1.1
-git branch -d hotfix/0.1.1
+git push origin v0.1.1
+# open a master -> develop PR, merge --no-ff (back-merge)
 ```
 
 ## 5. PR description
 
-Use this description:
-
-```md
-## Context
-Why this change, problem, or need.
-
-## Change
-What was done, with the key files or modules.
-
-## Verification
-- [ ] `npm run typecheck`
-- [ ] `npm test`
-- [ ] `npm run build`
-- [ ] `npm run smoke` (UI / card / export / CSS)
-- [ ] Lighthouse Accessibility with no regression
-- [ ] Complete keyboard flow verified
-- [ ] Documentation updated
-
-## Accessibility
-Impact and Lighthouse results (scores + fixed items).
-
-## Screenshots
-Before / after for any visual change (attached files, not committed).
-
-## Risks
-Side effects, rollback, points to test manually.
-```
-
-Attach screenshots and `tmp/` artifacts; never commit them.
+Create the PR body from `.github/pull_request_template.md` and fill every section. The template is
+the canonical description; do not restate it here. Attach screenshots and `tmp/` artifacts; never
+commit them.
 
 ## 6. Merge checklist
 
-- The PR targets the Gitflow branch: `develop` for feature/bugfix, `main` for release/hotfix.
-- Tests are green and there is no console error.
+- The PR targets the Gitflow branch: `develop` for feature/bugfix, `master` for release/hotfix.
+- CI (`CI / Typecheck, tests and build`) is green; run `npm run check:conventions` locally and read
+  its warnings, but never treat a convention warning as a merge blocker.
 - Lighthouse Accessibility does not regress.
 - Native HTML semantics are preferred; no redundant ARIA was added.
 - No WotC asset, OFL fonts only, `PROXY` and disclaimer intact.
 - Documentation updated if behavior, commands, or conventions changed.
-- Merge with `--no-ff`; tag releases on `main`; back-merge release and hotfix branches into
-  `develop`.
-- Delete the merged topic branch.
+- Merge with `--no-ff`; tag releases on `master` after the release/hotfix PR, then back-merge with a
+  `master` → `develop` PR.
+- Delete the merged topic branch. The full GitHub settings checklist is in
+  `.github/GITHUB_SETTINGS.md`.
 
 Do not push, open, or merge a PR unless the user explicitly asks. Otherwise, output the proposed
 commit message and PR description for review.
