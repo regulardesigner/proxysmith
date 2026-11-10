@@ -32,6 +32,12 @@ export function EditorPanel({
   const patchCard = useCardStore((state) => state.patchCard);
   const reset = useCardStore((state) => state.reset);
 
+  function handleReset() {
+    reset();
+    // Ce bouton est démonté par le reset : sans ce report, le focus tomberait sur <body>.
+    document.getElementById('card-search')?.focus();
+  }
+
   return (
     <div className="overflow-hidden rounded-2xl border border-stone-800/90 bg-stone-900/45 shadow-2xl shadow-black/30 backdrop-blur">
       <div className="px-5 py-5">
@@ -55,7 +61,7 @@ export function EditorPanel({
           {card && (
             <button
               type="button"
-              onClick={reset}
+              onClick={handleReset}
               className="shrink-0 rounded-lg border border-stone-700 px-2.5 py-1.5 text-xs text-stone-400 transition hover:border-stone-500 hover:text-stone-100"
             >
               Nouvelle carte
