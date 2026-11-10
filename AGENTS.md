@@ -327,7 +327,9 @@ use. Goal: stay consistent without creating a premature component library.
 - UI: system sans-serif stack, sizes `text-[10px]`/`[11px]` for labels, `text-xs`, `text-sm`,
   `text-base`. Numeric values and codes use `font-mono`.
 - Embedded fonts are **OFL only**: Cinzel, EB Garamond, `mana-font`. Never add a proprietary font
-  (Beleren, MPlantin…).
+  (Beleren, MPlantin…). `mana-font` ships proprietary MPlantin assets: the `stripMplantin` Vite
+  plugin removes them and falls back to EB Garamond, so no `mplantin-*` asset may appear in
+  `dist/`.
 
 ### Components and states
 
