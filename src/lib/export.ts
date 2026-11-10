@@ -47,8 +47,8 @@ export type SheetLayout = {
 };
 
 /**
- * Planche A4 3 × 3 : les cartes sont jointives (63 × 88,2 mm, soit le ratio
- * 750 × 1050 px à ~302 DPI) et centrées. Les traits de coupe sont placés dans
+ * Planche A4 3 × 3 : les cartes sont jointives (63,5 × 88,9 mm, soit le ratio
+ * 750 × 1050 px à 300 DPI) et centrées. Les traits de coupe sont placés dans
  * les marges, alignés sur chaque ligne et colonne de la grille.
  */
 export function computeSheetLayout(

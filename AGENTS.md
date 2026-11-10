@@ -303,7 +303,7 @@ use. Goal: stay consistent without creating a premature component library.
 |---|---|
 | Background | `#0f0e0c`, discreet radial glows (`app-glow`) |
 | Surfaces | `bg-stone-900/45`, `bg-stone-950/40`, borders `border-stone-700/80` or `stone-800/90` |
-| Text | `stone-100` (primary), `stone-400` (secondary), `stone-500/600` (meta) |
+| Text | `stone-100` (primary), `stone-400` (secondary/meta); avoid `stone-500/600` for readable text (below 4.5:1 on the dark background) |
 | Action | `amber-500` / `amber-400` (primary button, focus, selection) |
 | Success / local | `emerald-300` / `emerald-500` |
 | Error | `red-300` |
@@ -378,8 +378,8 @@ Reference level: **WCAG 2.2 AA**. Accessibility is part of the definition of don
   necessary, `aria-live` / `role="status"` / `role="alert"`.
 - Do not convey information by color alone: selection combines `aria-pressed` + a ring, errors have
   explicit text.
-- Minimum contrast: 4.5:1 for normal text, 3:1 for large text, UI components, and focus. Check
-  `stone-500/600` text on dark backgrounds.
+- Minimum contrast: 4.5:1 for normal text, 3:1 for large text, UI components, and focus. On the dark
+  background, `stone-500` and `stone-600` are below 4.5:1: use `stone-400` for readable meta text.
 - Forms: error associated with the field (`aria-describedby`), explicit label, no placeholder used
   as the only label.
 - Consistent heading hierarchy: one `h1`, then `h2`/`h3` with no skipped level.
@@ -436,7 +436,8 @@ Reference level: **WCAG 2.2 AA**. Accessibility is part of the definition of don
   TanStack Query cache.
 - **French first** search (`lang:fr`), fallback to all languages. Use `printed_name`,
   `printed_text`, `printed_type_line` when available.
-- `type_line` stays in English; this is an assumed choice, editable in the editor.
+- `typeLine` prefers the localized `printed_type_line` (front face first), then falls back to the
+  English `type_line`; it stays editable in the editor.
 - Multi-face cards: only the **front face** is used (`isFrontFaceOnly`).
 - Do not set `User-Agent` in `fetch` (forbidden in browsers); keep `Accept: application/json`.
 - Handle `404` (no results) and `429` (explicit message, no aggressive retry).
