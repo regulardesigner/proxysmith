@@ -72,7 +72,8 @@ Skills (loaded on demand):
   preview.
 - `card-export` — card rendering, PNG/PDF export, artwork compositing, print geometry, smoke/pixel
   checks.
-- `pr-delivery` — atomic Conventional Commit, PR description, verification matrix, merge checklist.
+- `pr-delivery` — atomic gitmoji + Conventional Commit, Gitflow branches, PR description,
+  verification matrix, merge checklist.
 - `skeptical-review` — falsification protocol: formalize an assumption, define what would disprove
   it, attack it with code/data/tests, and return `FALSIFIED`, `NOT FALSIFIED`, or `INCONCLUSIVE`.
 
@@ -302,7 +303,7 @@ use. Goal: stay consistent without creating a premature component library.
 |---|---|
 | Background | `#0f0e0c`, discreet radial glows (`app-glow`) |
 | Surfaces | `bg-stone-900/45`, `bg-stone-950/40`, borders `border-stone-700/80` or `stone-800/90` |
-| Text | `stone-100` (primary), `stone-400` (secondary), `stone-500/600` (meta) |
+| Text | `stone-100` (primary), `stone-400` (secondary/meta); avoid `stone-500/600` for readable text (below 4.5:1 on the dark background) |
 | Action | `amber-500` / `amber-400` (primary button, focus, selection) |
 | Success / local | `emerald-300` / `emerald-500` |
 | Error | `red-300` |
@@ -327,7 +328,9 @@ use. Goal: stay consistent without creating a premature component library.
 - UI: system sans-serif stack, sizes `text-[10px]`/`[11px]` for labels, `text-xs`, `text-sm`,
   `text-base`. Numeric values and codes use `font-mono`.
 - Embedded fonts are **OFL only**: Cinzel, EB Garamond, `mana-font`. Never add a proprietary font
-  (Beleren, MPlantin…).
+  (Beleren, MPlantin…). `mana-font` ships proprietary MPlantin assets: the `stripMplantin` Vite
+  plugin removes them and falls back to EB Garamond, so no `mplantin-*` asset may appear in
+  `dist/`.
 
 ### Components and states
 
@@ -375,8 +378,8 @@ Reference level: **WCAG 2.2 AA**. Accessibility is part of the definition of don
   necessary, `aria-live` / `role="status"` / `role="alert"`.
 - Do not convey information by color alone: selection combines `aria-pressed` + a ring, errors have
   explicit text.
-- Minimum contrast: 4.5:1 for normal text, 3:1 for large text, UI components, and focus. Check
-  `stone-500/600` text on dark backgrounds.
+- Minimum contrast: 4.5:1 for normal text, 3:1 for large text, UI components, and focus. On the dark
+  background, `stone-500` and `stone-600` are below 4.5:1: use `stone-400` for readable meta text.
 - Forms: error associated with the field (`aria-describedby`), explicit label, no placeholder used
   as the only label.
 - Consistent heading hierarchy: one `h1`, then `h2`/`h3` with no skipped level.
@@ -433,7 +436,8 @@ Reference level: **WCAG 2.2 AA**. Accessibility is part of the definition of don
   TanStack Query cache.
 - **French first** search (`lang:fr`), fallback to all languages. Use `printed_name`,
   `printed_text`, `printed_type_line` when available.
-- `type_line` stays in English; this is an assumed choice, editable in the editor.
+- `typeLine` prefers the localized `printed_type_line` (front face first), then falls back to the
+  English `type_line`; it stays editable in the editor.
 - Multi-face cards: only the **front face** is used (`isFrontFaceOnly`).
 - Do not set `User-Agent` in `fetch` (forbidden in browsers); keep `Accept: application/json`.
 - Handle `404` (no results) and `429` (explicit message, no aggressive retry).
@@ -477,23 +481,31 @@ documented here and in the README.
 - One commit = **one coherent, atomic change**. Do not mix a feature, a formatting refactor, and a
   fix in the same commit.
 - Commit messages and PR titles in **English**, imperative mood.
-- **Conventional Commits** format:
+- **gitmoji + Conventional Commits** format:
 
   ```
-  <type>(<scope>): <imperative, lowercase subject, no period>
+  <gitmoji> <type>(<scope>): <imperative, lowercase subject, no period>
   ```
+
+  The gitmoji is a Unicode emoji from [gitmoji.dev](https://gitmoji.dev) followed by a space;
+  `:shortcode:` is accepted when the tooling does not render emoji. The emoji prefixes the
+  Conventional Commit header; it does not replace `type` or `scope`.
 
   Types: `feat`, `fix`, `refactor`, `test`, `docs`, `style`, `perf`, `build`, `ci`, `chore`.
   Common scopes: `search`, `card`, `editor`, `art`, `export`, `theme`, `store`, `a11y`, `deps`,
   `docs`.
 
+  gitmoji mapping: `feat` ✨, `fix` 🐛, `refactor` ♻️, `test` ✅, `docs` 📝, `style` 💄, `perf` ⚡️,
+  `build` 🔨, `ci` 👷, `chore` 🔧; plus ♿️ accessibility, 🔒️ security, ⬆️ dependency upgrade,
+  🔥 deletion, 🔖 release, 💥 breaking change.
+
   Examples:
 
   ```
-  feat(theme): add a manual frame color override
-  fix(export): keep the artwork framing identical to the preview
-  test(mana): cover tap and untap glyph mapping
-  docs(agents): document accessibility and Lighthouse rules
+  ✨ feat(theme): add a manual frame color override
+  🐛 fix(export): keep the artwork framing identical to the preview
+  ✅ test(mana): cover tap and untap glyph mapping
+  📝 docs(agents): document accessibility and Lighthouse rules
   ```
 
 - Subject ≤ 72 characters, imperative, no initial capital, no trailing period. The body explains
@@ -510,11 +522,23 @@ documented here and in the README.
 
 ### Branches and pull requests
 
-- Work on a dedicated branch, never directly on `main`. Names in English, kebab-case:
-  `feat/frame-color`, `fix/export-artwork`, `docs/agents-accessibility`, `chore/deps`.
-- One PR = **one topic**, opened against `main` after updating to the latest version. If it exceeds
-  ~400 useful lines, split it or justify.
-- PR title in Conventional Commits format, identical to the main commit.
+Gitflow branching model:
+
+- `main` — production; only receives `release/*` and `hotfix/*` merges plus `v<version>` tags.
+  Never commit directly to it.
+- `develop` — integration; finished features and bugfixes land here. Never commit directly to it.
+- `feature/<topic>` — from `develop`, merged back into `develop`.
+- `bugfix/<topic>` — from `develop`, merged back into `develop`.
+- `release/<version>` — from `develop`, merged into `main`, back-merged into `develop`, tagged on
+  `main`.
+- `hotfix/<version>` — from `main`, merged into `main`, back-merged into `develop`, tagged on
+  `main`.
+
+Names are English kebab-case after the prefix, for example `feature/dark-frame` or
+`bugfix/search-focus`. One PR = **one topic**, opened against the branch's Gitflow target
+(`develop` for feature/bugfix, `main` for release/hotfix) after updating to the latest version. If
+it exceeds ~400 useful lines, split it or justify. PR title uses the same gitmoji + Conventional
+Commits format as its main commit.
 - Mandatory description:
 
   ```md
@@ -548,7 +572,9 @@ documented here and in the README.
 - Screenshots and `tmp/` artifacts are attached to the PR, not committed.
 - Explicitly verify before merging: no WotC artwork or asset, OFL fonts only, `PROXY` notice and
   disclaimer intact, no exposed secret.
-- **Squash merge** when the platform allows it, to keep a readable history.
+- **Merge with `--no-ff`** to preserve the Gitflow topology; do not squash feature branches, since
+  that flattens history and breaks the release and hotfix back-merge points. Tag releases on
+  `main` and back-merge `release/*` and `hotfix/*` into `develop`.
 - A PR with red tests, a console error, a Lighthouse Accessibility regression, or a blocking
   accessibility defect must not be merged.
 

@@ -113,7 +113,8 @@ Accept: application/json
 
 ## Limites connues (v0.1)
 
-- La ligne de type fournie par Scryfall reste en anglais ; elle est modifiable dans l'éditeur.
+- La ligne de type utilise en priorité `printed_type_line` localisé par Scryfall, avec repli sur la
+  version anglaise ; elle est modifiable dans l'éditeur.
 - Le PDF 9-up n'a pas encore été validé par un test d'impression réel sur papier.
 - Génération d'illustration IA reportée en v1.1.
 - Cartes double-face : seule la face avant est utilisée.
