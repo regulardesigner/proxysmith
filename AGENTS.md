@@ -19,8 +19,8 @@ Product invariants:
 - Outputs: **PNG 750 × 1050 px at 300 DPI** (63.5 × 88.9 mm) and **A4 9-up PDF** with crop marks.
 - 100% client-side: no account, no backend, no analytics. The only network call is Scryfall.
 
-Status: local MVP. PWA, IndexedDB persistence, Tauri 2, and AI illustration generation are planned
-in `PLAN.md`; do not implement them without an explicit request.
+Status: local MVP with an installable PWA shell. IndexedDB persistence, Tauri 2, and AI illustration
+generation are planned in `PLAN.md`; do not implement them without an explicit request.
 
 ## Commands
 
@@ -33,8 +33,9 @@ npm run dev -- --port 5173   # development server
 npm test                     # Vitest unit tests
 npm run typecheck            # strict TypeScript, no emit
 npm run build                # typecheck + production build
-npm run preview              # serve the production build (Lighthouse)
+npm run preview              # serve the production build (Lighthouse, PWA)
 npm run smoke                # Playwright E2E flow, dev server required
+npm run check:pwa            # verify the generated manifest, icons and service worker
 npm run check:conventions    # warning-only branch/commit naming check
 ```
 
@@ -466,10 +467,22 @@ Existing `localStorage` keys, to be validated before reading:
 Always guard access with `typeof localStorage === 'undefined'`. Any new preference must be
 documented here and in the README.
 
+## PWA
+
+- `vite-plugin-pwa` generates the manifest, icons, service worker, and precache at build time.
+- The service worker is disabled in development (`devOptions.enabled: false`); installability and
+  offline mode are tested with `npm run build && npm run preview`, never on the Vite dev server.
+- The app shell is precached. Scryfall JSON uses a *network first* runtime cache (24 h, 50 entries).
+  Never precache user illustrations.
+- `npm run check:pwa` runs after `npm run build` in CI and fails if the manifest, icons, or service
+  worker output is missing.
+
 ## Known pitfalls
 
 - The dev server must run from `proxysmith/`; otherwise Vite cannot find the configuration.
 - `npm run smoke` fails if the server is not on port 5173.
+- The service worker does not exist on the dev server; a stale cached build only reproduces with
+  `npm run preview` (use a private window or unregister the service worker).
 - `tmp/` is ignored: screenshots must not be committed.
 - `html-to-image` does not reliably render the illustration: do not remove the `.mtg-art-img` filter
   or the canvas compositing.

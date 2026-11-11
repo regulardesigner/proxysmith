@@ -25,6 +25,8 @@ illustration** — aucun artwork officiel n'est récupéré ni affiché.
 - Illustration composée directement sur le canvas d'export : le rendu est identique à l'aperçu,
   y compris avec zoom et décalage.
 - 100 % local : aucun compte, aucune donnée envoyée à un serveur autre que Scryfall.
+- Installable comme **PWA** : l'interface et les dernières réponses Scryfall consultées restent
+  disponibles hors ligne.
 
 ## Démarrage
 
@@ -42,6 +44,8 @@ npm run build      # typecheck + build de production
 npm run typecheck  # TypeScript uniquement
 npm test           # tests unitaires (Vitest)
 npm run smoke      # parcours E2E Playwright (serveur dev requis)
+npm run preview    # sert le build de production (PWA, Lighthouse)
+npm run check:pwa  # vérifie le manifeste et le service worker générés
 ```
 
 Le script `npm run smoke` utilise Chrome installé sur la machine, génère des captures dans
@@ -50,6 +54,26 @@ les trois templates), les symboles de mana (dont `{T}`), les variantes Signature
 bicolore 2026, le relief et le parchemin 1993, la couleur de cadre imposée, l'upload d'art, la
 présence de l'illustration dans l'export, le PNG 300 DPI et la planche PDF A4. Il nécessite que
 `npm run dev` tourne déjà.
+
+## PWA et hors ligne
+
+Le build de production génère un manifeste, des icônes et un service worker (`vite-plugin-pwa` +
+Workbox). Pour tester l'installation et le mode hors ligne :
+
+```bash
+npm run build
+npm run preview   # http://localhost:4173
+```
+
+- Chrome/Edge : icône d'installation dans la barre d'adresse. Safari/iOS : **Partager → Sur l'écran
+  d'accueil**.
+- Le shell de l'application (HTML, JS, CSS, polices, icônes) est précaché : une fois la page ouverte,
+  elle se relance sans réseau.
+- Les recherches Scryfall déjà consultées sont conservées 24 h (stratégie *network first*, 50
+  entrées). Une recherche jamais effectuée nécessite le réseau.
+- Les illustrations importées ne sont jamais mises en cache par le service worker.
+- Le serveur de développement n'enregistre pas de service worker : l'installation et le mode hors
+  ligne se vérifient avec `npm run preview`.
 
 ## Templates de carte
 
@@ -87,6 +111,7 @@ mémorisé dans `localStorage` (`proxysmith:accent`).
 | Recherche / cache | TanStack Query |
 | Rendu carte | DOM/CSS à taille fixe |
 | Export | `html-to-image` + canvas + `pdf-lib` |
+| PWA | `vite-plugin-pwa` + Workbox |
 | Symboles | `mana-font` |
 | Polices | Cinzel + EB Garamond (`@fontsource`, licence OFL) |
 | Tests | Vitest + Playwright |
@@ -118,6 +143,7 @@ Accept: application/json
 - Le PDF 9-up n'a pas encore été validé par un test d'impression réel sur papier.
 - Génération d'illustration IA reportée en v1.1.
 - Cartes double-face : seule la face avant est utilisée.
+- Hors ligne, seules les recherches Scryfall déjà consultées restent disponibles.
 - Pas de persistance entre les rechargements (hors préférences de template, variante et couleur de cadre).
 - Emballage Tauri (macOS/Windows/Linux) pas encore ajouté.
 
@@ -133,7 +159,9 @@ src/
 ├── index.css        # thème + rendu de la carte
 └── main.tsx
 scripts/smoke.mjs    # parcours E2E Playwright
+scripts/check-pwa.mjs # vérification du build PWA
 public/favicon.svg
+public/icons/        # icônes PWA et Apple
 PLAN.md              # plan d'implémentation et roadmap
 ```
 
