@@ -33,9 +33,8 @@ Configure a ruleset (or classic branch protection) for both `master` and `develo
 - [ ] Require status checks to pass before merging.
   - [ ] Require branches to be up to date before merging.
   - Required checks:
-    - `CI / Typecheck, tests and build`
-    - Do **not** add `Conventions / Branch and commit warnings (non-blocking)`: warnings must never
-      block a merge.
+    - `Typecheck, tests and build`
+    - Do **not** add `Branch and commit warnings (non-blocking)`: warnings must never block a merge.
 - [ ] Block force pushes.
 - [ ] Block deletions.
 - Leave **Require linear history** disabled: it forbids the merge commits Gitflow relies on.
@@ -58,8 +57,8 @@ Optional, depending on how the project is tracked:
 
 After applying the settings:
 
-1. Open a throwaway pull request into `develop` and confirm that `CI / Typecheck, tests and build`
-   is listed as required.
+1. Open a throwaway pull request into `develop` and confirm that `Typecheck, tests and build` is
+   listed as required.
 2. Try to push directly to `develop` and confirm that GitHub rejects it.
 3. Confirm that the conventions workflow appears but does not block the merge.
 4. Confirm that merging deletes the head branch automatically.

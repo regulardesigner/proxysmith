@@ -38,7 +38,7 @@ npm run smoke                # Playwright E2E flow, dev server required
 npm run check:conventions    # warning-only branch/commit naming check
 ```
 
-- Node.js 22+.
+- Node.js 22+ (`.nvmrc` is provided; run `nvm use` if you use nvm).
 - `npm run smoke` launches the installed Chrome (`channel: 'chrome'`) against
   `http://localhost:5173`, writes its screenshots and artifacts to `tmp/` (git-ignored), and must be
   run **after** the dev server.
@@ -565,8 +565,8 @@ are disabled in GitHub once the settings in
 
 Required on every pull request:
 
-1. **CI green** — the `CI / Typecheck, tests and build` job runs `npm ci`, `npm run typecheck`,
-   `npm test`, and `npm run build`.
+1. **CI green** — the `Typecheck, tests and build` check from the `CI` workflow runs `npm ci`,
+   `npm run typecheck`, `npm test`, and `npm run build`.
 2. **Local checks for UI changes** — `npm run smoke` for UI, card, export, or CSS changes, plus
    Lighthouse Accessibility when the change touches colors, typography, or interactions.
 3. **Self-review** — read the full diff. For a non-trivial change, run the `reviewer` subagent and

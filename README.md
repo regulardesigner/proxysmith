@@ -28,7 +28,7 @@ illustration** — aucun artwork officiel n'est récupéré ni affiché.
 
 ## Démarrage
 
-Prérequis : Node.js 22+.
+Prérequis : Node.js 22+ (`.nvmrc` fourni ; `nvm use` pour aligner la version locale).
 
 ```bash
 npm install
