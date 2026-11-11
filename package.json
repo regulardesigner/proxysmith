@@ -9,6 +9,7 @@
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "check:pwa": "node scripts/check-pwa.mjs",
     "check:conventions": "node scripts/check-conventions.mjs",
     "smoke": "node scripts/smoke.mjs"
   },
@@ -34,6 +35,7 @@
     "tailwindcss": "^4.3.5",
     "typescript": "^7.0.2",
     "vite": "^8.3.6",
+    "vite-plugin-pwa": "^2.0.0",
     "vitest": "^5.1.0"
   }
 }
