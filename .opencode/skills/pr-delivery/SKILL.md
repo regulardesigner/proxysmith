@@ -158,8 +158,8 @@ commit them.
 ## 6. Merge checklist
 
 - The PR targets the Gitflow branch: `develop` for feature/bugfix, `master` for release/hotfix.
-- CI (`CI / Typecheck, tests and build`) is green; run `npm run check:conventions` locally and read
-  its warnings, but never treat a convention warning as a merge blocker.
+- The `Typecheck, tests and build` check (workflow `CI`) is green; run `npm run check:conventions`
+  locally and read its warnings, but never treat a convention warning as a merge blocker.
 - Lighthouse Accessibility does not regress.
 - Native HTML semantics are preferred; no redundant ARIA was added.
 - No WotC asset, OFL fonts only, `PROXY` and disclaimer intact.
