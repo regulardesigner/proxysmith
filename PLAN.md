@@ -1,7 +1,8 @@
 # ProxySmith — Plan d'implémentation MVP
 
 Créer une carte proxy Magic: The Gathering à partir de son nom, sans réutiliser l'artwork officiel :
-l'utilisateur importe une illustration personnelle (génération IA prévue en v1.1), puis imprime sa carte.
+l'utilisateur importe une illustration personnelle, puis imprime sa carte. Le dessin intégré et la
+génération IA arrivent après la v1.
 
 ---
 
@@ -26,6 +27,8 @@ l'utilisateur importe une illustration personnelle (génération IA prévue en v
 - Application mobile.
 - **Génération d'illustration IA** → reportée en v1.1. L'interface `ArtProvider` est conservée dans
   l'architecture pour brancher un provider (cloud ou ComfyUI local) sans refonte.
+- **Dessin intégré** → après l'emballage Tauri (lot 8), et avant la génération IA. Il réutilise
+  l'état `art` existant, donc aucun changement du recadrage ni des exports n'est nécessaire.
 
 **Critères d'acceptation**
 
@@ -178,10 +181,11 @@ ligne de collection (`PROXY · set · numéro`). Mention « PROXY » activée pa
 
 ---
 
-## 5. Artwork (v1 : upload uniquement)
+## 5. Artwork (upload en v1, dessin ensuite)
 
 > Décision validée : la génération IA est reportée en v1.1. On garde dès maintenant l'interface
-> `ArtProvider` et le prompt builder dans le code, mais l'UI n'expose que l'upload.
+> `ArtProvider` et le prompt builder dans le code, mais l'UI v1 n'expose que l'upload. Le dessin
+> intégré est décrit ci-dessous pour le lot 8, après l'emballage Tauri.
 
 **Upload**
 
@@ -189,6 +193,72 @@ ligne de collection (`PROXY · set · numéro`). Mention « PROXY » activée pa
 - Recadrage avec zoom/déplacement, ratio verrouillé sur la zone d'illustration.
 - Stockage en data URL dans l'état pour la v0.1 ; migration IndexedDB prévue avec la persistance.
   L'image est embarquée dans le PNG exporté.
+
+### Dessin intégré — post-v1 (lot 8)
+
+Un mode « Dessiner » est proposé à côté de l'import dans le panneau d'illustration, **après
+l'emballage Tauri et avant la génération IA**. Il permet de créer une illustration sans quitter
+l'application, avec les mêmes conséquences qu'un upload : la carte, le recadrage et les exports ne
+changent pas.
+
+**Toile**
+
+- Toile fixe au **ratio de la fenêtre d'art du template Signature** (634 × 394 px à l'échelle 1),
+  soit **1268 × 788 px** en interne (2×) pour rester nette à l'export. C'est le template par défaut :
+  le dessin y apparaît sans recadrage. Les templates 1993 (638 × 380) et 2026 (750 × 430) recadrent
+  légèrement via `object-fit: cover`, exactement comme une image importée.
+- **Fond** : au choix entre **transparent** (le dessin se fond dans le papier du template) et
+  **papier clair opaque** (rendu proche d'une feuille, plus prévisible à l'impression). Le choix est
+  un contrôle accessible, mémorisé pour la session, et s'applique à la rasterisation.
+
+**Outils (première version, volontairement basiques)**
+
+- **Épaisseurs** : trois valeurs nommées (fin, moyen, large), exprimées en pixels de la toile 2×.
+- **Palette** : couleurs déjà utilisées par la génération de carte, importées de `cardTheme.ts`
+  (W, U, B, R, G, incolore, or) plus encre et papier. Pas de sélecteur libre dans cette version.
+- **Brosses** :
+  - `pen` (stylo) : trait opaque, extrémités rondes, largeur constante — brosse par défaut.
+  - `marker` (feutre) : trait semi-transparent et plus large, extrémités droites ; les
+    superpositions foncent, ce qui donne l'effet feutre.
+  - `eraser` (gomme) : efface par `destination-out`, avec la même épaisseur que la brosse active.
+  - `pencil` (crayon) : **optionnel**, seulement si le reste est stable. Texture obtenue par
+    plusieurs passes fines et légèrement décalées, sans dépendance externe.
+- **Annuler / rétablir** : historique borné (ex. 50 états), plus « Tout effacer ».
+- Pas de remplissage, de formes, de calques nommés, ni d'import ou de composition avec une image
+  existante dans cette version : la toile part toujours vierge.
+
+**Interaction et rendu**
+
+- Pointer Events (`pointerdown`/`move`/`up`), `setPointerCapture` et `touch-action: none` pour
+  éviter le défilement tactile pendant le tracé.
+- Lissage par courbes quadratiques entre les points ; rendu dans `requestAnimationFrame`.
+- Deux calques : traits validés + trait en cours, pour ne pas redessiner tout l'historique à chaque
+  mouvement.
+- Le point est converti des coordonnées écran vers les coordonnées de la toile avec le facteur
+  d'échelle réel (la toile est affichée plus petite que 1268 px).
+
+**Application à la carte**
+
+- « Utiliser ce dessin » rasterise la toile en PNG data URL et appelle
+  `setArt({ dataUrl, fileName: 'dessin.png', zoom: 1, offsetX: 0, offsetY: 0 })`.
+- `Artwork`, le recadrage, `drawArtwork` et les exports restent **inchangés** : le dessin est une
+  source d'image comme une autre.
+- Les traits de la session restent en mémoire tant que l'application est ouverte, ce qui permet de
+  revenir dans le mode dessin et de continuer après une première application. Un nouvel upload ou
+  un retrait d'illustration efface la session de dessin. Un rechargement de page repart d'une toile
+  vierge ; la persistance du dessin pourra s'appuyer sur le stockage local du lot 6.
+
+**Accessibilité**
+
+- Tous les contrôles sont des boutons natifs avec un nom français ; l'état sélectionné combine
+  `aria-pressed`, un anneau visible et un libellé, jamais la couleur seule.
+- La toile est focusable (`tabIndex=0`), porte un `aria-label` et un `aria-describedby` vers des
+  instructions visibles.
+- **Mode clavier minimal** : les flèches déplacent un curseur visible, `Entrée` pose ou lève le
+  crayon (les déplacements dessinent quand le crayon est posé), `Échap` lève le crayon. Le mode
+  `gomme` s'applique aussi au clavier.
+- L'upload reste une alternative complète : l'utilisateur qui ne peut pas dessiner garde le même
+  résultat final.
 
 ### Génération IA — v1.1 (non bloquante)
 
@@ -226,6 +296,7 @@ interface ArtProvider {
 | 5 | Export PNG et PDF 9-up, traits de coupe, calibrage impression | 1 j | ✅ PNG + PDF livrés, test papier à faire |
 | 6 | PWA, sauvegarde locale, tests E2E, README, disclaimer | 1 j | 🟡 README + smoke faits, PWA/persistance à faire |
 | 7 | Emballage Tauri | 1–2 j | ⏳ |
+| 8 | Dessin intégré : toile 2D, épaisseurs, palette, brosses, gomme, annuler/rétablir | 1–1,5 j | ⏳ après la v1, avant la génération IA (crayon optionnel : +0,5 j) |
 | **Total** | **MVP upload + impression** | **~7 j** | |
 
 Jalon démontrable dès le lot 2 : recherche → carte rendue sans artwork. ✅
@@ -246,6 +317,10 @@ Génération IA : +1,5 j en v1.1 (provider cloud ou ComfyUI local, mode démo, r
 | Rendu écran ≠ impression | Même composant, export 300 DPI, test d'impression réel, traits de coupe |
 | Polices propriétaires | Uniquement OFL ; vérifier les licences avant embarquement |
 | Cartes double-face / layouts spéciaux | Détecter `card_faces`, v1 = face avant, message explicite |
+| Dessin décalé par rapport à la fenêtre d'art | Toile au ratio du template Signature (634:394), rasterisation 2×, même recadrage qu'un upload sur les autres templates |
+| Latence au stylet ou au tactile | Pointer Events + `setPointerCapture`, `touch-action: none`, rAF, calque du trait en cours séparé |
+| Outil de dessin inutilisable au clavier | Contrôles natifs, mode clavier flèches + Entrée, instructions, upload conservé comme alternative |
+| Poids ou dépendance supplémentaire | Canvas 2D natif, aucune dépendance ; `perfect-freehand` seulement si la qualité est insuffisante |
 
 **Note juridique** : les noms, textes et symboles Magic sont la propriété de Wizards of the Coast.
 Le projet s'inscrit dans le cadre du Fan Content Policy, à but non commercial. Les proxies produits
@@ -262,11 +337,17 @@ des cartes officielles. L'artwork généré reste soumis aux conditions du provi
 4. Faire un test d'impression réel de la planche PDF 9-up (lot 5).
 5. PWA + persistance locale des proxies (lot 6).
 6. Emballage Tauri (lot 7).
-7. Génération d'illustration IA (v1.1).
+7. Dessin intégré dans le panneau d'illustration (lot 8) : toile 2D, épaisseurs, palette, gomme,
+   annuler/rétablir.
+8. Génération d'illustration IA (v1.1).
 
 ### Décisions validées
 
 - **Cible** : PWA web-first, puis Tauri 2 pour macOS/Windows/Linux.
 - **Génération d'art** : upload uniquement en v1 ; génération IA reportée en v1.1 (interface prête).
+- **Dessin intégré** : hors v1, lot 8 après l'emballage Tauri et avant la génération IA. Outil basic
+  (stylo, feutre, gomme ; crayon optionnel), toile au ratio de la fenêtre d'art, palette issue de
+  `cardTheme.ts`, rasterisation PNG réutilisant l'état `art` existant pour ne pas toucher au
+  recadrage ni aux exports.
 - **Direction visuelle** : trois templates originaux (Signature clair/sombre, 1993, 2026), sans asset WotC.
 - **Couleur de cadre** : automatique par identité, avec surcharge manuelle (WUBRG, incolore, or) mémorisée.
