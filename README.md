@@ -27,6 +27,8 @@ illustration** — aucun artwork officiel n'est récupéré ni affiché.
 - 100 % local : aucun compte, aucune donnée envoyée à un serveur autre que Scryfall.
 - Installable comme **PWA** : l'interface et les dernières réponses Scryfall consultées restent
   disponibles hors ligne.
+- **Sauvegarde locale** automatique de la carte en cours et bibliothèque de proxies nommées
+  (IndexedDB), illustrations comprises.
 
 ## Démarrage
 
@@ -75,6 +77,26 @@ npm run preview   # http://localhost:4173
 - Le serveur de développement n'enregistre pas de service worker : l'installation et le mode hors
   ligne se vérifient avec `npm run preview`.
 
+## Sauvegarde locale
+
+Les données restent dans le navigateur, dans la base IndexedDB `proxysmith` :
+
+- **Session en cours** : la carte, l'illustration, le design et la couleur de cadre sont restaurés
+  automatiquement au rechargement. L'écriture est différée de 600 ms après la dernière modification
+  et forcée quand l'onglet passe en arrière-plan.
+- **Proxies nommées** : la section **Mes proxies sauvegardées** du panneau de droite permet de
+  nommer, recharger et supprimer des cartes complètes, illustration comprise. L'image est stockée
+  séparément des métadonnées pour ne pas la réécrire à chaque frappe.
+
+Limites :
+
+- Les sauvegardes sont liées au navigateur et au profil ; vider les données du site les efface.
+- Deux onglets ouverts sur la même application partagent la même session : le dernier enregistrement
+  gagne.
+- Une illustration peut peser jusqu'à 20 Mo ; plusieurs sauvegardes très lourdes peuvent atteindre le
+  quota du navigateur. L'application affiche alors un message explicite.
+- Pas encore d'export/import des sauvegardes vers un fichier.
+
 ## Templates de carte
 
 Le sélecteur **Design de carte** du panneau de droite propose trois rendus, appliqués à l'identique
@@ -112,6 +134,7 @@ mémorisé dans `localStorage` (`proxysmith:accent`).
 | Rendu carte | DOM/CSS à taille fixe |
 | Export | `html-to-image` + canvas + `pdf-lib` |
 | PWA | `vite-plugin-pwa` + Workbox |
+| Persistance | IndexedDB (`idb`) |
 | Symboles | `mana-font` |
 | Polices | Cinzel + EB Garamond (`@fontsource`, licence OFL) |
 | Tests | Vitest + Playwright |
@@ -144,16 +167,16 @@ Accept: application/json
 - Génération d'illustration IA reportée en v1.1.
 - Cartes double-face : seule la face avant est utilisée.
 - Hors ligne, seules les recherches Scryfall déjà consultées restent disponibles.
-- Pas de persistance entre les rechargements (hors préférences de template, variante et couleur de cadre).
+- Sauvegardes locales liées au navigateur ; pas encore d'export/import vers un fichier.
 - Emballage Tauri (macOS/Windows/Linux) pas encore ajouté.
 
 ## Structure
 
 ```
 src/
-├── components/      # recherche, aperçu, éditeur, upload
-├── hooks/           # debounce
-├── lib/             # client Scryfall, mana, export
+├── components/      # recherche, aperçu, éditeur, upload, sauvegardes
+├── hooks/           # debounce, persistance
+├── lib/             # client Scryfall, mana, export, stockage IndexedDB
 ├── store/           # état Zustand
 ├── App.tsx
 ├── index.css        # thème + rendu de la carte

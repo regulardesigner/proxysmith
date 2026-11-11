@@ -514,6 +514,55 @@ if (
   throw new Error(`Combobox déplié incohérent : ${JSON.stringify(expandedSearch)}`);
 }
 
+// Persistance locale : session restaurée, sauvegarde nommée chargée puis supprimée.
+await page.getByRole('option').first().click();
+await page.locator('.mtg-card').waitFor();
+await page.waitForTimeout(500);
+const persistedName = await page.locator('.mtg-name').innerText();
+
+await page.locator('input[type="file"]').setInputFiles('tmp/art.png');
+await page.waitForTimeout(400);
+await page.getByRole('button', { name: /1993/ }).click();
+await page.waitForTimeout(900);
+
+await page.reload({ waitUntil: 'networkidle' });
+await page.locator('.mtg-card').waitFor();
+await page.waitForTimeout(300);
+const restoredSession = await page.evaluate(() => ({
+  name: document.querySelector('.mtg-name')?.textContent ?? '',
+  art: Boolean(document.querySelector('.mtg-art-img')),
+  classic: document.querySelector('.mtg-card')?.classList.contains('mtg-card--classic'),
+}));
+console.log('--- SESSION RESTORED ---', JSON.stringify(restoredSession));
+if (!restoredSession.name.includes(persistedName) || !restoredSession.art || !restoredSession.classic) {
+  throw new Error('Session locale non restaurée');
+}
+
+await page.getByLabel('Nom de la sauvegarde').fill('Smoke proxy');
+await page.getByRole('button', { name: 'Sauvegarder la carte' }).click();
+await page.getByRole('status').filter({ hasText: 'sauvegardée' }).waitFor();
+const savedProxy = page.locator('li').filter({ hasText: 'Smoke proxy' });
+await savedProxy.waitFor();
+
+await page.reload({ waitUntil: 'networkidle' });
+await savedProxy.waitFor();
+await page.getByRole('button', { name: 'Charger', exact: true }).click();
+await page.getByRole('status').filter({ hasText: 'chargée' }).waitFor();
+if ((await page.locator('.mtg-card').count()) !== 1) throw new Error('Sauvegarde non chargée');
+
+await page.getByRole('button', { name: 'Supprimer' }).click();
+await page.getByRole('button', { name: 'Confirmer' }).click();
+await page.getByText(/Aucune sauvegarde/).waitFor();
+console.log('--- SAVED PROXY --- loaded and deleted');
+
+await page.getByRole('button', { name: 'Nouvelle carte' }).click();
+await page.waitForTimeout(900);
+await page.reload({ waitUntil: 'networkidle' });
+await page.waitForTimeout(300);
+if ((await page.locator('.mtg-card').count()) !== 0) {
+  throw new Error('Session non effacée après réinitialisation');
+}
+
 console.log('--- ERRORS ---');
 console.log(errors.length ? errors.join('\n') : 'none');
 if (errors.length) throw new Error('Erreurs navigateur détectées');
