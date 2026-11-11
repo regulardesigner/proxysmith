@@ -38,7 +38,7 @@ npm run smoke                # Playwright E2E flow, dev server required
 npm run check:conventions    # warning-only branch/commit naming check
 ```
 
-- Node.js 22+.
+- Node.js 22+ (`.nvmrc` is provided; run `nvm use` if you use nvm).
 - `npm run smoke` launches the installed Chrome (`channel: 'chrome'`) against
   `http://localhost:5173`, writes its screenshots and artifacts to `tmp/` (git-ignored), and must be
   run **after** the dev server.
