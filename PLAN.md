@@ -294,7 +294,7 @@ interface ArtProvider {
 | 3 | Formulaire d'édition synchronisé avec l'aperçu | 0,5 j | ✅ |
 | 4 | Upload + recadrage d'illustration | 1 j | ✅ |
 | 5 | Export PNG et PDF 9-up, traits de coupe, calibrage impression | 1 j | ✅ PNG + PDF livrés, test papier à faire |
-| 6 | PWA, sauvegarde locale, tests E2E, README, disclaimer | 1 j | 🟡 PWA livrée ; persistance locale à faire |
+| 6 | PWA, sauvegarde locale, tests E2E, README, disclaimer | 1 j | ✅ PWA + persistance IndexedDB livrées |
 | 7 | Emballage Tauri | 1–2 j | ⏳ |
 | 8 | Dessin intégré : toile 2D, épaisseurs, palette, brosses, gomme, annuler/rétablir | 1–1,5 j | ⏳ après la v1, avant la génération IA (crayon optionnel : +0,5 j) |
 | **Total** | **MVP upload + impression** | **~7 j** | |
@@ -335,7 +335,7 @@ des cartes officielles. L'artwork généré reste soumis aux conditions du provi
 2. Brancher Scryfall et afficher la première carte (lot 1). ✅
 3. Upload d'illustration + aperçu des trois templates (lots 2–4). ✅
 4. Faire un test d'impression réel de la planche PDF 9-up (lot 5).
-5. Persistance locale des proxies (lot 6b) ; PWA installable livrée (lot 6a).
+5. PWA installable et persistance locale des proxies (lot 6). ✅
 6. Emballage Tauri (lot 7).
 7. Dessin intégré dans le panneau d'illustration (lot 8) : toile 2D, épaisseurs, palette, gomme,
    annuler/rétablir.
@@ -346,6 +346,8 @@ des cartes officielles. L'artwork généré reste soumis aux conditions du provi
 - **Cible** : PWA web-first, puis Tauri 2 pour macOS/Windows/Linux.
 - **PWA** : shell précaché et installable ; réponses Scryfall en cache 24 h (*network first*), aucune
   illustration utilisateur mise en cache par le service worker.
+- **Persistance** : restauration automatique de la session (carte, illustration, design) et
+  bibliothèque de proxies nommées dans IndexedDB ; l'image est stockée séparément des métadonnées.
 - **Génération d'art** : upload uniquement en v1 ; génération IA reportée en v1.1 (interface prête).
 - **Dessin intégré** : hors v1, lot 8 après l'emballage Tauri et avant la génération IA. Outil basic
   (stylo, feutre, gomme ; crayon optionnel), toile au ratio de la fenêtre d'art, palette issue de

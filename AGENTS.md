@@ -19,8 +19,8 @@ Product invariants:
 - Outputs: **PNG 750 × 1050 px at 300 DPI** (63.5 × 88.9 mm) and **A4 9-up PDF** with crop marks.
 - 100% client-side: no account, no backend, no analytics. The only network call is Scryfall.
 
-Status: local MVP with an installable PWA shell. IndexedDB persistence, Tauri 2, and AI illustration
-generation are planned in `PLAN.md`; do not implement them without an explicit request.
+Status: local MVP with an installable PWA shell and IndexedDB persistence. Tauri 2 and AI
+illustration generation are planned in `PLAN.md`; do not implement them without an explicit request.
 
 ## Commands
 
@@ -131,34 +131,38 @@ Rules:
 
 ```
 src/
-├── components/        # React UI: search, preview, editor, upload, mana
-├── hooks/             # reusable hooks (debounce)
-├── lib/               # business logic: scryfall, mana, theme, export boundary
+├── components/        # React UI: search, preview, editor, upload, mana, saved proxies
+├── hooks/             # reusable hooks (debounce, persistence)
+├── lib/               # business logic: scryfall, mana, theme, storage, export boundary
 ├── store/             # Zustand global state
 ├── types.ts           # shared domain types
 ├── index.css          # global theme + 750 × 1050 rendering of the three templates
 ├── App.tsx            # screen composition and export orchestration
 └── main.tsx           # React bootstrap
 scripts/smoke.mjs      # E2E flow and render/export checks
+scripts/check-pwa.mjs  # build-output check for the manifest and service worker
 ```
 
 Data flow:
 
 ```
 SearchPanel → lib/scryfall.ts → store/useCardStore.ts → CardPreview → lib/export.ts
+                                      ↕
+                       hooks/usePersistence.ts → lib/storage.ts (IndexedDB)
 ```
 
 Dependency rules:
 
 - `lib/` depends on neither React nor the store. `scryfall.ts`, `mana.ts`, and `cardTheme.ts` are
   pure and tested; `export.ts` is the DOM/canvas boundary, but its calculations
-  (`computeSheetLayout`, `withPngDpi`, `slugify`) stay pure and testable.
+  (`computeSheetLayout`, `withPngDpi`, `slugify`) stay pure and testable. `storage.ts` is the
+  IndexedDB boundary and is tested with `fake-indexeddb`.
 - Components do not `fetch`: search goes through `lib/scryfall.ts` and TanStack Query.
 - The store is the **source of truth** for the card, template, variant, accent, and artwork.
   Components read through targeted Zustand selectors (`useCardStore((state) => state.card)`), never
   the entire store.
-- Side effects (DOM, download, canvas, `localStorage`) stay at the boundaries: `lib/export.ts`,
-  `ArtUpload`, `useCardStore`.
+- Side effects (DOM, download, canvas, `localStorage`, IndexedDB) stay at the boundaries:
+  `lib/export.ts`, `lib/storage.ts`, `ArtUpload`, `useCardStore`, `hooks/usePersistence.ts`.
 - `types.ts` contains only domain types, with no logic.
 
 ## Clean coding
@@ -339,8 +343,8 @@ use. Goal: stay consistent without creating a premature component library.
 ### Components and states
 
 - Conditional classes with `clsx`, never manual concatenation.
-- Form field: reuse `inputClass` from `EditorPanel` (`stone-700` border, translucent background,
-  `amber-500` focus + ring). Do not recreate a local field style.
+- Form field: reuse `inputClass` from `src/components/inputStyles.ts` (`stone-700` border,
+  translucent background, `amber-500` focus + ring). Do not recreate a local field style.
 - Primary button: `amber-500` background, `stone-950` text, `amber-400` hover. Secondary button:
   `stone-700` border, `amber-500/50` hover and `amber-500/5` background. Destructive button: red
   only on hover.
@@ -467,6 +471,21 @@ Existing `localStorage` keys, to be validated before reading:
 Always guard access with `typeof localStorage === 'undefined'`. Any new preference must be
 documented here and in the README.
 
+IndexedDB (database `proxysmith`, version 1):
+
+- `session` / `sessionArt` — the current card, preferences, and artwork framing, plus the artwork
+  image (key `current`).
+- `proxies` / `proxyArt` — named saves; the list loads only the metadata, never the images.
+- The artwork data URL is written **separately** from the metadata and only when it changes.
+  Rewriting a 20 MB data URL on every keystroke is forbidden.
+- Autosave is debounced 600 ms and flushed on `pagehide` / hidden tab. Restoring is gated: the UI
+  waits for hydration (3 s timeout) and never overwrites a card the user selected first.
+- Validate every record on read with the guards in `lib/storage.ts`; ignore malformed or
+  old-schema records instead of crashing. Map failures to French messages with
+  `describeStorageError`.
+- Saves stay local to the browser profile. No sync, no upload, no logging of stored artworks.
+- The named-save list must stay reachable when no card is selected.
+
 ## PWA
 
 - `vite-plugin-pwa` generates the manifest, icons, service worker, and precache at build time.
@@ -483,6 +502,10 @@ documented here and in the README.
 - `npm run smoke` fails if the server is not on port 5173.
 - The service worker does not exist on the dev server; a stale cached build only reproduces with
   `npm run preview` (use a private window or unregister the service worker).
+- IndexedDB hydration is asynchronous: never write the session before it resolves, and never let a
+  late restore overwrite a card the user already selected.
+- Autosave compares the artwork `dataUrl` before writing the image; writing it on every card
+  change fills the quota and freezes the UI.
 - `tmp/` is ignored: screenshots must not be committed.
 - `html-to-image` does not reliably render the illustration: do not remove the `.mtg-art-img` filter
   or the canvas compositing.
