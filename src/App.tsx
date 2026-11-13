@@ -63,7 +63,7 @@ function App() {
             Local · sans compte
           </span>
           <span className="rounded-full border border-stone-700 bg-stone-900/60 px-3 py-1.5 text-[10px] tracking-wider text-stone-400 uppercase">
-            v0.1
+            v1.0
           </span>
         </div>
       </header>
