@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 import { useCardStore } from './store/useCardStore';
+import { usePersistence } from './hooks/usePersistence';
 import { exportCardPng, exportCardsPdf } from './lib/export';
 import { SearchPanel } from './components/SearchPanel';
 import { CardPreview } from './components/CardPreview';
@@ -13,6 +14,7 @@ function App() {
   const frame = useCardStore((state) => state.frame);
   const accent = useCardStore((state) => state.accent);
   const art = useCardStore((state) => state.art);
+  const { ready, error: persistenceError } = usePersistence();
   const cardRef = useRef<HTMLDivElement>(null);
   const [exporting, setExporting] = useState<ExportFormat | null>(null);
   const [exportError, setExportError] = useState<string | null>(null);
@@ -61,7 +63,7 @@ function App() {
             Local · sans compte
           </span>
           <span className="rounded-full border border-stone-700 bg-stone-900/60 px-3 py-1.5 text-[10px] tracking-wider text-stone-400 uppercase">
-            v0.1
+            v1.0
           </span>
         </div>
       </header>
@@ -83,51 +85,68 @@ function App() {
         </div>
       </section>
 
+      {persistenceError && (
+        <p
+          role="alert"
+          className="mx-auto w-full max-w-7xl px-5 pb-2 text-xs text-red-300 sm:px-8"
+        >
+          {persistenceError}
+        </p>
+      )}
+
       <main className="mx-auto grid w-full max-w-7xl grid-cols-1 gap-8 px-5 pb-16 sm:px-8 lg:grid-cols-[minmax(0,1fr)_430px] lg:items-start">
-        <section className="flex flex-col items-center gap-4 lg:sticky lg:top-6">
-          <div className="card-scaler">
-            {card ? (
-              <CardPreview
-                ref={cardRef}
-                card={card}
-                template={template}
-                frame={frame}
-                accent={accent}
-                art={art}
-              />
-            ) : (
-              <EmptyCard />
-            )}
-          </div>
+        {!ready ? (
+          <p role="status" className="px-5 py-16 text-center text-sm text-stone-400 lg:col-span-2">
+            Restauration de votre travail…
+          </p>
+        ) : (
+          <>
+            <section className="flex flex-col items-center gap-4 lg:sticky lg:top-6">
+              <div className="card-scaler">
+                {card ? (
+                  <CardPreview
+                    ref={cardRef}
+                    card={card}
+                    template={template}
+                    frame={frame}
+                    accent={accent}
+                    art={art}
+                  />
+                ) : (
+                  <EmptyCard />
+                )}
+              </div>
 
-          <div className="text-center">
-            <p className="font-display text-[11px] tracking-[0.22em] text-stone-400 uppercase">
-              Aperçu 300 DPI
-            </p>
-            <p className="mt-1 text-xs text-stone-400">
-              {template === 'signature'
-                ? frame === 'dark'
-                  ? 'Signature sombre'
-                  : 'Signature clair'
-                : template === 'classic'
-                  ? 'Old school 1993'
-                  : 'Moderne 2026'}{' '}
-              · 750 × 1050 px
-            </p>
-            {card && (
-              <p className="mt-1 text-[11px] text-stone-400">
-                Impression : échelle 100 %, papier 200–300 g
-              </p>
-            )}
-          </div>
-        </section>
+              <div className="text-center">
+                <p className="font-display text-[11px] tracking-[0.22em] text-stone-400 uppercase">
+                  Aperçu 300 DPI
+                </p>
+                <p className="mt-1 text-xs text-stone-400">
+                  {template === 'signature'
+                    ? frame === 'dark'
+                      ? 'Signature sombre'
+                      : 'Signature clair'
+                    : template === 'classic'
+                      ? 'Old school 1993'
+                      : 'Moderne 2026'}{' '}
+                  · 750 × 1050 px
+                </p>
+                {card && (
+                  <p className="mt-1 text-[11px] text-stone-400">
+                    Impression : échelle 100 %, papier 200–300 g
+                  </p>
+                )}
+              </div>
+            </section>
 
-        <EditorPanel
-          onExportPng={() => void handleExport('png')}
-          onExportPdf={() => void handleExport('pdf')}
-          exporting={exporting}
-          exportError={exportError}
-        />
+            <EditorPanel
+              onExportPng={() => void handleExport('png')}
+              onExportPdf={() => void handleExport('pdf')}
+              exporting={exporting}
+              exportError={exportError}
+            />
+          </>
+        )}
       </main>
 
       <footer className="border-t border-stone-800/70 px-5 py-6 text-center text-[11px] leading-relaxed text-stone-400 sm:px-8">

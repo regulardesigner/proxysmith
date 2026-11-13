@@ -1,7 +1,7 @@
 {
   "name": "proxysmith",
   "private": true,
-  "version": "0.1.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -9,6 +9,8 @@
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "check:pwa": "node scripts/check-pwa.mjs",
+    "check:conventions": "node scripts/check-conventions.mjs",
     "smoke": "node scripts/smoke.mjs"
   },
   "dependencies": {
@@ -17,6 +19,7 @@
     "@tanstack/react-query": "^5.107.1",
     "clsx": "^2.1.1",
     "html-to-image": "^1.11.13",
+    "idb": "^8.0.4",
     "mana-font": "^1.18.0",
     "pdf-lib": "^1.17.1",
     "react": "^19.3.1",
@@ -30,9 +33,11 @@
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.2.1",
+    "fake-indexeddb": "^6.2.8",
     "tailwindcss": "^4.3.5",
     "typescript": "^7.0.2",
     "vite": "^8.3.6",
+    "vite-plugin-pwa": "^2.0.0",
     "vitest": "^5.1.0"
   }
 }

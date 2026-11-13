@@ -12,6 +12,19 @@ export const SHEET_COLUMNS = 3;
 export const SHEET_ROWS = 3;
 export const SHEET_CARD_COUNT = SHEET_COLUMNS * SHEET_ROWS;
 
+/**
+ * Safari peut interrompre un téléchargement si son URL blob est révoquée par un
+ * timer. On garde donc l'URL de la planche précédente jusqu'au prochain export
+ * (ou jusqu'au déchargement de la page, qui libère le blob).
+ */
+let pendingDownloadUrl: string | null = null;
+
+function revokePendingDownloadUrl(): void {
+  if (!pendingDownloadUrl) return;
+  URL.revokeObjectURL(pendingDownloadUrl);
+  pendingDownloadUrl = null;
+}
+
 export type SheetRect = {
   x: number;
   y: number;
@@ -34,8 +47,8 @@ export type SheetLayout = {
 };
 
 /**
- * Planche A4 3 × 3 : les cartes sont jointives (63 × 88,2 mm, soit le ratio
- * 750 × 1050 px à ~302 DPI) et centrées. Les traits de coupe sont placés dans
+ * Planche A4 3 × 3 : les cartes sont jointives (63,5 × 88,9 mm, soit le ratio
+ * 750 × 1050 px à 300 DPI) et centrées. Les traits de coupe sont placés dans
  * les marges, alignés sur chaque ligne et colonne de la grille.
  */
 export function computeSheetLayout(
@@ -226,18 +239,19 @@ async function drawArtwork(
 
   const artStyle = getComputedStyle(artElement);
   const imageElement = artElement.querySelector<HTMLImageElement>('.mtg-art-img');
-  const border = imageElement
-    ? imageElement.offsetLeft
-    : Number.parseFloat(artStyle.borderLeftWidth) || 0;
+  // offsetLeft est relatif au bord de padding, pas au bord de la bordure : il faut
+  // donc ajouter l'épaisseur de bordure du cadre pour retrouver l'origine du contenu.
+  const borderLeft = Number.parseFloat(artStyle.borderLeftWidth) || 0;
+  const borderTop = Number.parseFloat(artStyle.borderTopWidth) || 0;
 
-  const x = artElement.offsetLeft + border;
-  const y = artElement.offsetTop + (imageElement ? imageElement.offsetTop : border);
+  const x = artElement.offsetLeft + borderLeft;
+  const y = artElement.offsetTop + borderTop;
   const width = imageElement?.offsetWidth || artElement.clientWidth;
   const height = imageElement?.offsetHeight || artElement.clientHeight;
   if (!width || !height) return;
 
   const outerRadius = Number.parseFloat(artStyle.borderTopLeftRadius) || 0;
-  const clipRadius = Math.max(0, outerRadius - border);
+  const clipRadius = Math.max(0, outerRadius - borderLeft);
 
   const source = await loadImage(art.dataUrl);
 
@@ -335,6 +349,8 @@ export async function exportCardsPdf(
   name: string,
   art: Artwork | null,
 ): Promise<void> {
+  revokePendingDownloadUrl();
+
   const canvas = await renderCardCanvas(node, art);
   const dataUrl = canvas.toDataURL('image/png');
 
@@ -382,9 +398,9 @@ export async function exportCardsPdf(
   const bytes = await pdf.save();
   const blob = new Blob([bytes as BlobPart], { type: 'application/pdf' });
   const url = URL.createObjectURL(blob);
+  pendingDownloadUrl = url;
   const link = document.createElement('a');
   link.download = `${slugify(name)}-planche-a4.pdf`;
   link.href = url;
   link.click();
-  window.setTimeout(() => URL.revokeObjectURL(url), 1_000);
 }

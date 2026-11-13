@@ -5,9 +5,8 @@ import { ACCENT_LABELS, ACCENT_OPTIONS } from '../lib/cardTheme';
 import type { CardTemplate } from '../types';
 import { ArtUpload } from './ArtUpload';
 import { ManaCost } from './Mana';
-
-const inputClass =
-  'w-full rounded-lg border border-stone-700/80 bg-stone-950/60 px-3 py-2 text-sm text-stone-100 outline-none transition placeholder:text-stone-400 focus:border-amber-500/60 focus:ring-2 focus:ring-amber-500/15';
+import { SavedProxies } from './SavedProxies';
+import { inputClass } from './inputStyles';
 
 type EditorPanelProps = {
   onExportPng: () => void;
@@ -32,6 +31,12 @@ export function EditorPanel({
   const patchCard = useCardStore((state) => state.patchCard);
   const reset = useCardStore((state) => state.reset);
 
+  function handleReset() {
+    reset();
+    // Ce bouton est démonté par le reset : sans ce report, le focus tomberait sur <body>.
+    document.getElementById('card-search')?.focus();
+  }
+
   return (
     <div className="overflow-hidden rounded-2xl border border-stone-800/90 bg-stone-900/45 shadow-2xl shadow-black/30 backdrop-blur">
       <div className="px-5 py-5">
@@ -55,7 +60,7 @@ export function EditorPanel({
           {card && (
             <button
               type="button"
-              onClick={reset}
+              onClick={handleReset}
               className="shrink-0 rounded-lg border border-stone-700 px-2.5 py-1.5 text-xs text-stone-400 transition hover:border-stone-500 hover:text-stone-100"
             >
               Nouvelle carte
@@ -308,14 +313,18 @@ export function EditorPanel({
               </p>
             )}
           </Section>
-
-          <p className="border-t border-stone-800/80 px-5 py-4 text-[11px] leading-relaxed text-stone-400">
-            Usage personnel uniquement. Ne vendez pas ces proxies et ne les présentez pas comme des
-            cartes officielles. Magic: The Gathering est une marque de Wizards of the Coast ; ce
-            projet n’est ni affilié ni approuvé par Wizards.
-          </p>
         </>
       )}
+
+      <Section title="Mes proxies sauvegardées">
+        <SavedProxies />
+      </Section>
+
+      <p className="border-t border-stone-800/80 px-5 py-4 text-[11px] leading-relaxed text-stone-400">
+        Usage personnel uniquement. Ne vendez pas ces proxies et ne les présentez pas comme des
+        cartes officielles. Magic: The Gathering est une marque de Wizards of the Coast ; ce projet
+        n’est ni affilié ni approuvé par Wizards.
+      </p>
     </div>
   );
 }

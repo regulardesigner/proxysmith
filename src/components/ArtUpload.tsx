@@ -18,19 +18,24 @@ export function ArtUpload() {
   const art = useCardStore((state) => state.art);
   const setArt = useCardStore((state) => state.setArt);
   const inputRef = useRef<HTMLInputElement>(null);
+  const requestIdRef = useRef(0);
   const [dragging, setDragging] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function handleFile(file: File) {
+    const requestId = requestIdRef.current + 1;
+    requestIdRef.current = requestId;
     setError(null);
 
     if (!ACCEPTED.includes(file.type)) {
+      setBusy(false);
       setError('Format non pris en charge. Utilisez un PNG, JPG ou WebP.');
       return;
     }
 
     if (file.size > MAX_BYTES) {
+      setBusy(false);
       setError('Image trop lourde (20 Mo maximum).');
       return;
     }
@@ -38,6 +43,7 @@ export function ArtUpload() {
     setBusy(true);
     try {
       const dataUrl = await readFileAsDataUrl(file);
+      if (requestId !== requestIdRef.current) return;
       setArt({
         dataUrl,
         fileName: file.name,
@@ -46,9 +52,10 @@ export function ArtUpload() {
         offsetY: 0,
       });
     } catch {
+      if (requestId !== requestIdRef.current) return;
       setError("Impossible de lire cette image. Essayez un autre fichier.");
     } finally {
-      setBusy(false);
+      if (requestId === requestIdRef.current) setBusy(false);
     }
   }
 
@@ -82,6 +89,7 @@ export function ArtUpload() {
         <button
           type="button"
           onClick={() => inputRef.current?.click()}
+          aria-describedby={error ? 'art-upload-error' : undefined}
           onDragOver={(event) => {
             event.preventDefault();
             setDragging(true);
@@ -129,13 +137,17 @@ export function ArtUpload() {
               <button
                 type="button"
                 onClick={() => inputRef.current?.click()}
+                aria-describedby={error ? 'art-upload-error' : undefined}
                 className="rounded-lg border border-stone-700 px-2.5 py-1.5 text-xs text-stone-300 transition hover:border-stone-500 hover:text-stone-100"
               >
                 Remplacer
               </button>
               <button
                 type="button"
-                onClick={() => setArt(null)}
+                onClick={() => {
+                  setArt(null);
+                  setError(null);
+                }}
                 className="rounded-lg border border-stone-800 px-2.5 py-1.5 text-xs text-stone-400 transition hover:border-red-500/40 hover:text-red-300"
               >
                 Retirer
@@ -183,7 +195,7 @@ export function ArtUpload() {
       )}
 
       {error && (
-        <p role="alert" className="mt-2 text-xs text-red-300">
+        <p id="art-upload-error" role="alert" className="mt-2 text-xs text-red-300">
           {error}
         </p>
       )}

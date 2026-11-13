@@ -19,8 +19,9 @@ Product invariants:
 - Outputs: **PNG 750 × 1050 px at 300 DPI** (63.5 × 88.9 mm) and **A4 9-up PDF** with crop marks.
 - 100% client-side: no account, no backend, no analytics. The only network call is Scryfall.
 
-Status: local MVP. PWA, IndexedDB persistence, Tauri 2, and AI illustration generation are planned
-in `PLAN.md`; do not implement them without an explicit request.
+Status: MVP published as a static PWA on GitHub Pages, with IndexedDB persistence. Tauri packaging
+(backlog) and AI illustration generation (v1.1) are planned in `PLAN.md`; do not implement them
+without an explicit request.
 
 ## Commands
 
@@ -33,11 +34,14 @@ npm run dev -- --port 5173   # development server
 npm test                     # Vitest unit tests
 npm run typecheck            # strict TypeScript, no emit
 npm run build                # typecheck + production build
-npm run preview              # serve the production build (Lighthouse)
+npm run preview              # serve the production build (Lighthouse, PWA)
 npm run smoke                # Playwright E2E flow, dev server required
+npm run check:pwa            # verify the generated manifest, icons and service worker
+npm run check:conventions    # warning-only branch/commit naming check
+VITE_BASE=/proxysmith/ npm run build   # reproduce the GitHub Pages sub-path
 ```
 
-- Node.js 22+.
+- Node.js 22+ (`.nvmrc` is provided; run `nvm use` if you use nvm).
 - `npm run smoke` launches the installed Chrome (`channel: 'chrome'`) against
   `http://localhost:5173`, writes its screenshots and artifacts to `tmp/` (git-ignored), and must be
   run **after** the dev server.
@@ -45,6 +49,8 @@ npm run smoke                # Playwright E2E flow, dev server required
   server.
 - Before considering a task done: `npm run typecheck`, `npm test`, `npm run build`. Add
   `npm run smoke` whenever a change touches the UI, card rendering, exports, or CSS.
+- `npm run check:conventions` verifies branch names and commit headers but only prints warnings and
+  always exits 0. It is a reminder, never a merge gate.
 
 ## Skills and subagents
 
@@ -72,7 +78,8 @@ Skills (loaded on demand):
   preview.
 - `card-export` — card rendering, PNG/PDF export, artwork compositing, print geometry, smoke/pixel
   checks.
-- `pr-delivery` — atomic Conventional Commit, PR description, verification matrix, merge checklist.
+- `pr-delivery` — atomic gitmoji + Conventional Commit, Gitflow branches, PR description,
+  verification matrix, merge checklist.
 - `skeptical-review` — falsification protocol: formalize an assumption, define what would disprove
   it, attack it with code/data/tests, and return `FALSIFIED`, `NOT FALSIFIED`, or `INCONCLUSIVE`.
 
@@ -126,34 +133,38 @@ Rules:
 
 ```
 src/
-├── components/        # React UI: search, preview, editor, upload, mana
-├── hooks/             # reusable hooks (debounce)
-├── lib/               # business logic: scryfall, mana, theme, export boundary
+├── components/        # React UI: search, preview, editor, upload, mana, saved proxies
+├── hooks/             # reusable hooks (debounce, persistence)
+├── lib/               # business logic: scryfall, mana, theme, storage, export boundary
 ├── store/             # Zustand global state
 ├── types.ts           # shared domain types
 ├── index.css          # global theme + 750 × 1050 rendering of the three templates
 ├── App.tsx            # screen composition and export orchestration
 └── main.tsx           # React bootstrap
 scripts/smoke.mjs      # E2E flow and render/export checks
+scripts/check-pwa.mjs  # build-output check for the manifest and service worker
 ```
 
 Data flow:
 
 ```
 SearchPanel → lib/scryfall.ts → store/useCardStore.ts → CardPreview → lib/export.ts
+                                      ↕
+                       hooks/usePersistence.ts → lib/storage.ts (IndexedDB)
 ```
 
 Dependency rules:
 
 - `lib/` depends on neither React nor the store. `scryfall.ts`, `mana.ts`, and `cardTheme.ts` are
   pure and tested; `export.ts` is the DOM/canvas boundary, but its calculations
-  (`computeSheetLayout`, `withPngDpi`, `slugify`) stay pure and testable.
+  (`computeSheetLayout`, `withPngDpi`, `slugify`) stay pure and testable. `storage.ts` is the
+  IndexedDB boundary and is tested with `fake-indexeddb`.
 - Components do not `fetch`: search goes through `lib/scryfall.ts` and TanStack Query.
 - The store is the **source of truth** for the card, template, variant, accent, and artwork.
   Components read through targeted Zustand selectors (`useCardStore((state) => state.card)`), never
   the entire store.
-- Side effects (DOM, download, canvas, `localStorage`) stay at the boundaries: `lib/export.ts`,
-  `ArtUpload`, `useCardStore`.
+- Side effects (DOM, download, canvas, `localStorage`, IndexedDB) stay at the boundaries:
+  `lib/export.ts`, `lib/storage.ts`, `ArtUpload`, `useCardStore`, `hooks/usePersistence.ts`.
 - `types.ts` contains only domain types, with no logic.
 
 ## Clean coding
@@ -302,7 +313,7 @@ use. Goal: stay consistent without creating a premature component library.
 |---|---|
 | Background | `#0f0e0c`, discreet radial glows (`app-glow`) |
 | Surfaces | `bg-stone-900/45`, `bg-stone-950/40`, borders `border-stone-700/80` or `stone-800/90` |
-| Text | `stone-100` (primary), `stone-400` (secondary), `stone-500/600` (meta) |
+| Text | `stone-100` (primary), `stone-400` (secondary/meta); avoid `stone-500/600` for readable text (below 4.5:1 on the dark background) |
 | Action | `amber-500` / `amber-400` (primary button, focus, selection) |
 | Success / local | `emerald-300` / `emerald-500` |
 | Error | `red-300` |
@@ -327,13 +338,15 @@ use. Goal: stay consistent without creating a premature component library.
 - UI: system sans-serif stack, sizes `text-[10px]`/`[11px]` for labels, `text-xs`, `text-sm`,
   `text-base`. Numeric values and codes use `font-mono`.
 - Embedded fonts are **OFL only**: Cinzel, EB Garamond, `mana-font`. Never add a proprietary font
-  (Beleren, MPlantin…).
+  (Beleren, MPlantin…). `mana-font` ships proprietary MPlantin assets: the `stripMplantin` Vite
+  plugin removes them and falls back to EB Garamond, so no `mplantin-*` asset may appear in
+  `dist/`.
 
 ### Components and states
 
 - Conditional classes with `clsx`, never manual concatenation.
-- Form field: reuse `inputClass` from `EditorPanel` (`stone-700` border, translucent background,
-  `amber-500` focus + ring). Do not recreate a local field style.
+- Form field: reuse `inputClass` from `src/components/inputStyles.ts` (`stone-700` border,
+  translucent background, `amber-500` focus + ring). Do not recreate a local field style.
 - Primary button: `amber-500` background, `stone-950` text, `amber-400` hover. Secondary button:
   `stone-700` border, `amber-500/50` hover and `amber-500/5` background. Destructive button: red
   only on hover.
@@ -375,8 +388,8 @@ Reference level: **WCAG 2.2 AA**. Accessibility is part of the definition of don
   necessary, `aria-live` / `role="status"` / `role="alert"`.
 - Do not convey information by color alone: selection combines `aria-pressed` + a ring, errors have
   explicit text.
-- Minimum contrast: 4.5:1 for normal text, 3:1 for large text, UI components, and focus. Check
-  `stone-500/600` text on dark backgrounds.
+- Minimum contrast: 4.5:1 for normal text, 3:1 for large text, UI components, and focus. On the dark
+  background, `stone-500` and `stone-600` are below 4.5:1: use `stone-400` for readable meta text.
 - Forms: error associated with the field (`aria-describedby`), explicit label, no placeholder used
   as the only label.
 - Consistent heading hierarchy: one `h1`, then `h2`/`h3` with no skipped level.
@@ -433,7 +446,8 @@ Reference level: **WCAG 2.2 AA**. Accessibility is part of the definition of don
   TanStack Query cache.
 - **French first** search (`lang:fr`), fallback to all languages. Use `printed_name`,
   `printed_text`, `printed_type_line` when available.
-- `type_line` stays in English; this is an assumed choice, editable in the editor.
+- `typeLine` prefers the localized `printed_type_line` (front face first), then falls back to the
+  English `type_line`; it stays editable in the editor.
 - Multi-face cards: only the **front face** is used (`isFrontFaceOnly`).
 - Do not set `User-Agent` in `fetch` (forbidden in browsers); keep `Accept: application/json`.
 - Handle `404` (no results) and `429` (explicit message, no aggressive retry).
@@ -459,10 +473,57 @@ Existing `localStorage` keys, to be validated before reading:
 Always guard access with `typeof localStorage === 'undefined'`. Any new preference must be
 documented here and in the README.
 
+IndexedDB (database `proxysmith`, version 1):
+
+- `session` / `sessionArt` — the current card, preferences, and artwork framing, plus the artwork
+  image (key `current`).
+- `proxies` / `proxyArt` — named saves; the list loads only the metadata, never the images.
+- The artwork data URL is written **separately** from the metadata and only when it changes.
+  Rewriting a 20 MB data URL on every keystroke is forbidden.
+- Autosave is debounced 600 ms and flushed on `pagehide` / hidden tab. Restoring is gated: the UI
+  waits for hydration (3 s timeout) and never overwrites a card the user selected first.
+- Validate every record on read with the guards in `lib/storage.ts`; ignore malformed or
+  old-schema records instead of crashing. Map failures to French messages with
+  `describeStorageError`.
+- Saves stay local to the browser profile. No sync, no upload, no logging of stored artworks.
+- The named-save list must stay reachable when no card is selected.
+
+## PWA
+
+- The app is published at <https://www.regulardesigner.com/proxysmith/>. This is a GitHub Pages
+  **project site** served through the account's custom domain (the `*.github.io` URL redirects), so
+  the production base path stays `/proxysmith/`. Do not add a `CNAME` file to this repository: the
+  domain is configured on the user site.
+- `vite-plugin-pwa` generates the manifest, icons, service worker, and precache at build time.
+- `VITE_BASE` controls the base path and is normalized to a leading and trailing slash. It defaults
+  to `/`; only `.github/workflows/deploy-pages.yml` sets `/proxysmith/`. Never hardcode the
+  repository name in application code.
+- Reference public files from `index.html` with `%BASE_URL%`. Manifest icons stay **relative** to the
+  manifest URL. Absolute `/…` paths break the Pages build.
+- The app shell is precached. Scryfall JSON uses a *network first* runtime cache (24 h, 50 entries).
+  Never precache user illustrations.
+- The service worker is disabled in development (`devOptions.enabled: false`); installability and
+  offline mode are tested with `npm run build && npm run preview`, never on the Vite dev server.
+- `npm run check:pwa` runs after `npm run build` in CI and fails if the manifest, icons, start URL,
+  scope, or service worker output is missing or inconsistent with `VITE_BASE`.
+- `.github/workflows/deploy-pages.yml` publishes on every push to `master` and on manual
+  `workflow_dispatch` (useful for a preview deploy from `develop`). Pages must use **GitHub Actions**
+  as its source.
+
 ## Known pitfalls
 
 - The dev server must run from `proxysmith/`; otherwise Vite cannot find the configuration.
 - `npm run smoke` fails if the server is not on port 5173.
+- The service worker does not exist on the dev server; a stale cached build only reproduces with
+  `npm run preview` (use a private window or unregister the service worker).
+- `VITE_BASE` must be identical for `build`, `preview`, and `check:pwa`; otherwise the manifest,
+  icons, and service worker are requested from the wrong path.
+- IndexedDB is scoped to the origin: `localhost`, a local preview, and the GitHub Pages URL have
+  separate stores. Saves do not travel between them.
+- IndexedDB hydration is asynchronous: never write the session before it resolves, and never let a
+  late restore overwrite a card the user already selected.
+- Autosave compares the artwork `dataUrl` before writing the image; writing it on every card
+  change fills the quota and freezes the UI.
 - `tmp/` is ignored: screenshots must not be committed.
 - `html-to-image` does not reliably render the illustration: do not remove the `.mtg-art-img` filter
   or the canvas compositing.
@@ -477,23 +538,31 @@ documented here and in the README.
 - One commit = **one coherent, atomic change**. Do not mix a feature, a formatting refactor, and a
   fix in the same commit.
 - Commit messages and PR titles in **English**, imperative mood.
-- **Conventional Commits** format:
+- **gitmoji + Conventional Commits** format:
 
   ```
-  <type>(<scope>): <imperative, lowercase subject, no period>
+  <gitmoji> <type>(<scope>): <imperative, lowercase subject, no period>
   ```
+
+  The gitmoji is a Unicode emoji from [gitmoji.dev](https://gitmoji.dev) followed by a space;
+  `:shortcode:` is accepted when the tooling does not render emoji. The emoji prefixes the
+  Conventional Commit header; it does not replace `type` or `scope`.
 
   Types: `feat`, `fix`, `refactor`, `test`, `docs`, `style`, `perf`, `build`, `ci`, `chore`.
   Common scopes: `search`, `card`, `editor`, `art`, `export`, `theme`, `store`, `a11y`, `deps`,
   `docs`.
 
+  gitmoji mapping: `feat` ✨, `fix` 🐛, `refactor` ♻️, `test` ✅, `docs` 📝, `style` 💄, `perf` ⚡️,
+  `build` 🔨, `ci` 👷, `chore` 🔧; plus ♿️ accessibility, 🔒️ security, ⬆️ dependency upgrade,
+  🔥 deletion, 🔖 release, 💥 breaking change.
+
   Examples:
 
   ```
-  feat(theme): add a manual frame color override
-  fix(export): keep the artwork framing identical to the preview
-  test(mana): cover tap and untap glyph mapping
-  docs(agents): document accessibility and Lighthouse rules
+  ✨ feat(theme): add a manual frame color override
+  🐛 fix(export): keep the artwork framing identical to the preview
+  ✅ test(mana): cover tap and untap glyph mapping
+  📝 docs(agents): document accessibility and Lighthouse rules
   ```
 
 - Subject ≤ 72 characters, imperative, no initial capital, no trailing period. The body explains
@@ -510,47 +579,68 @@ documented here and in the README.
 
 ### Branches and pull requests
 
-- Work on a dedicated branch, never directly on `main`. Names in English, kebab-case:
-  `feat/frame-color`, `fix/export-artwork`, `docs/agents-accessibility`, `chore/deps`.
-- One PR = **one topic**, opened against `main` after updating to the latest version. If it exceeds
-  ~400 useful lines, split it or justify.
-- PR title in Conventional Commits format, identical to the main commit.
-- Mandatory description:
+Gitflow branching model:
 
-  ```md
-  ## Context
-  Why this change, problem, or need.
+- `master` — production; only receives `release/*` and `hotfix/*` merges plus `v<version>` tags.
+  Never commit directly to it.
+- `develop` — integration; finished features and bugfixes land here. Never commit directly to it.
+- `feature/<topic>` — from `develop`, merged back into `develop`.
+- `bugfix/<topic>` — from `develop`, merged back into `develop`.
+- `release/<version>` — from `develop`; PR into `master`, then a `master` → `develop` PR
+  back-merges it; tagged on `master`.
+- `hotfix/<version>` — from `master`; PR into `master`, then a `master` → `develop` PR back-merges
+  it; tagged on `master`.
 
-  ## Change
-  What was done, with the key files or modules.
-
-  ## Verification
-  - [ ] `npm run typecheck`
-  - [ ] `npm test`
-  - [ ] `npm run build`
-  - [ ] `npm run smoke` (UI / card / export / CSS)
-  - [ ] Lighthouse Accessibility with no regression
-  - [ ] Complete keyboard flow verified
-  - [ ] Documentation updated
-
-  ## Accessibility
-  Impact and Lighthouse results (scores + fixed items).
-
-  ## Screenshots
-  Before / after for any visual change (attached files, not committed).
-
-  ## Risks
-  Side effects, rollback, points to test manually.
-  ```
+Names are English kebab-case after the prefix, for example `feature/dark-frame` or
+`bugfix/search-focus`. One PR = **one topic**, opened against the branch's Gitflow target
+(`develop` for feature/bugfix, `master` for release/hotfix) after updating to the latest version. If
+it exceeds ~400 useful lines, split it or justify. PR title uses the same gitmoji + Conventional
+Commits format as its main commit.
+- Mandatory description: fill every section of `.github/pull_request_template.md`. It is the
+  canonical PR body; skills and agents link to it instead of restating it.
 
 - Self-review the diff before opening the PR: no dead code, no `console.log`, no unjustified TODO,
   no disabled test, no hardcoded value.
 - Screenshots and `tmp/` artifacts are attached to the PR, not committed.
 - Explicitly verify before merging: no WotC artwork or asset, OFL fonts only, `PROXY` notice and
   disclaimer intact, no exposed secret.
-- **Squash merge** when the platform allows it, to keep a readable history.
+- **Merge with `--no-ff`** to preserve the Gitflow topology; do not squash feature branches, since
+  that flattens history and breaks the release and hotfix back-merge points. Tag releases on
+  `master` after the release/hotfix PR, then open a `master` → `develop` PR to back-merge; never
+  merge locally into a protected branch.
 - A PR with red tests, a console error, a Lighthouse Accessibility regression, or a blocking
   accessibility defect must not be merged.
+
+### Review and merge process
+
+Every change reaches `develop` or `master` through a pull request. Direct pushes to these branches
+are disabled in GitHub once the settings in
+[`.github/GITHUB_SETTINGS.md`](./.github/GITHUB_SETTINGS.md) are applied.
+
+Required on every pull request:
+
+1. **CI green** — the `Typecheck, tests and build` check from the `CI` workflow runs `npm ci`,
+   `npm run typecheck`, `npm test`, and `npm run build`.
+2. **Local checks for UI changes** — `npm run smoke` for UI, card, export, or CSS changes, plus
+   Lighthouse Accessibility when the change touches colors, typography, or interactions.
+3. **Self-review** — read the full diff. For a non-trivial change, run the `reviewer` subagent and
+   resolve its `Blocker` and `Major` findings, or justify why they do not apply.
+4. **PR description** — fill `.github/pull_request_template.md`; keep the verification checkboxes
+   accurate.
+
+Solo mode: the repository owner may merge their own PR. No human approval is required while the
+project has a single maintainer, but the PR and the green CI checks are mandatory. When a second
+maintainer joins, require one approval on `develop` and `master` as described in the settings file.
+
+- The `Conventions` workflow checks branch names, commit headers, PR titles, and Gitflow targets,
+  emits `::warning::` annotations, and always succeeds. It is deliberately **not** a required check
+  and must never block a merge.
+- Keep merge commits: merge with `--no-ff`; squash and rebase merging are disabled in GitHub.
+- Release and hotfix back-merges also go through PRs: `release/x → master`, then `master →
+  develop`; tag `master` after the first merge.
+- Delete the merged topic branch; head-branch auto-deletion is enabled in the settings.
+- `develop` and `master` are protected against force pushes and deletion. Never rewrite or delete
+  them.
 
 ## Definition of done
 
@@ -562,6 +652,8 @@ documented here and in the README.
 - The complete keyboard flow works and Lighthouse Accessibility does not regress.
 - Native HTML semantics are preferred and no redundant ARIA has been added.
 - No console errors, no accessibility regression, UI text in French.
+- CI is green on the pull request, and convention warnings were reviewed even though they never
+  block a merge.
 - No WotC artwork or asset added; OFL fonts only; `PROXY` notice intact.
 - README/PLAN/AGENTS updated if commands, architecture, templates, accessibility, or preferences
   change.

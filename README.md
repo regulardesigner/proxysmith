@@ -25,10 +25,16 @@ illustration** — aucun artwork officiel n'est récupéré ni affiché.
 - Illustration composée directement sur le canvas d'export : le rendu est identique à l'aperçu,
   y compris avec zoom et décalage.
 - 100 % local : aucun compte, aucune donnée envoyée à un serveur autre que Scryfall.
+- Installable comme **PWA** : l'interface et les dernières réponses Scryfall consultées restent
+  disponibles hors ligne.
+- **Sauvegarde locale** automatique de la carte en cours et bibliothèque de proxies nommées
+  (IndexedDB), illustrations comprises.
+
+**En ligne** : <https://www.regulardesigner.com/proxysmith/> — installable et utilisable hors ligne.
 
 ## Démarrage
 
-Prérequis : Node.js 22+.
+Prérequis : Node.js 22+ (`.nvmrc` fourni ; `nvm use` pour aligner la version locale).
 
 ```bash
 npm install
@@ -42,6 +48,8 @@ npm run build      # typecheck + build de production
 npm run typecheck  # TypeScript uniquement
 npm test           # tests unitaires (Vitest)
 npm run smoke      # parcours E2E Playwright (serveur dev requis)
+npm run preview    # sert le build de production (PWA, Lighthouse)
+npm run check:pwa  # vérifie le manifeste et le service worker générés
 ```
 
 Le script `npm run smoke` utilise Chrome installé sur la machine, génère des captures dans
@@ -50,6 +58,55 @@ les trois templates), les symboles de mana (dont `{T}`), les variantes Signature
 bicolore 2026, le relief et le parchemin 1993, la couleur de cadre imposée, l'upload d'art, la
 présence de l'illustration dans l'export, le PNG 300 DPI et la planche PDF A4. Il nécessite que
 `npm run dev` tourne déjà.
+
+## PWA et hors ligne
+
+L'application est publiée sur GitHub Pages : **https://www.regulardesigner.com/proxysmith/**.
+Le domaine personnalisé du site utilisateur s'applique aussi aux sites de projet ; l'URL
+`https://regulardesigner.github.io/proxysmith/` redirige vers le domaine personnalisé. Le chemin
+reste `/proxysmith/`.
+
+- Chrome/Edge : icône d'installation dans la barre d'adresse. Safari/iOS : **Partager → Sur l'écran
+  d'accueil**.
+- Le shell de l'application (HTML, JS, CSS, polices, icônes) est précaché : une fois la page ouverte,
+  elle se relance sans réseau.
+- Les recherches Scryfall déjà consultées sont conservées 24 h (stratégie *network first*, 50
+  entrées). Une recherche jamais effectuée nécessite le réseau.
+- Les illustrations importées ne sont jamais mises en cache par le service worker.
+- Les données locales (sauvegardes, session) sont liées à l'origine : `localhost`, le preview et le
+  site GitHub Pages utilisent trois stockages IndexedDB distincts.
+
+Le build local reproduit le sous-chemin de GitHub Pages (`/proxysmith/`) avec `VITE_BASE` :
+
+```bash
+VITE_BASE=/proxysmith/ npm run build
+VITE_BASE=/proxysmith/ npm run preview   # http://localhost:4173/proxysmith/
+```
+
+Sans `VITE_BASE`, le build reste servi à la racine (`/`) comme avant. Le workflow
+`.github/workflows/deploy-pages.yml` construit et déploie automatiquement sur `master`, ou à la
+demande via `workflow_dispatch`. Le serveur de développement n'enregistre pas de service worker :
+l'installation et le mode hors ligne se vérifient avec `npm run preview`.
+
+## Sauvegarde locale
+
+Les données restent dans le navigateur, dans la base IndexedDB `proxysmith` :
+
+- **Session en cours** : la carte, l'illustration, le design et la couleur de cadre sont restaurés
+  automatiquement au rechargement. L'écriture est différée de 600 ms après la dernière modification
+  et forcée quand l'onglet passe en arrière-plan.
+- **Proxies nommées** : la section **Mes proxies sauvegardées** du panneau de droite permet de
+  nommer, recharger et supprimer des cartes complètes, illustration comprise. L'image est stockée
+  séparément des métadonnées pour ne pas la réécrire à chaque frappe.
+
+Limites :
+
+- Les sauvegardes sont liées au navigateur et au profil ; vider les données du site les efface.
+- Deux onglets ouverts sur la même application partagent la même session : le dernier enregistrement
+  gagne.
+- Une illustration peut peser jusqu'à 20 Mo ; plusieurs sauvegardes très lourdes peuvent atteindre le
+  quota du navigateur. L'application affiche alors un message explicite.
+- Pas encore d'export/import des sauvegardes vers un fichier.
 
 ## Templates de carte
 
@@ -87,6 +144,8 @@ mémorisé dans `localStorage` (`proxysmith:accent`).
 | Recherche / cache | TanStack Query |
 | Rendu carte | DOM/CSS à taille fixe |
 | Export | `html-to-image` + canvas + `pdf-lib` |
+| PWA | `vite-plugin-pwa` + Workbox |
+| Persistance | IndexedDB (`idb`) |
 | Symboles | `mana-font` |
 | Polices | Cinzel + EB Garamond (`@fontsource`, licence OFL) |
 | Tests | Vitest + Playwright |
@@ -111,30 +170,51 @@ Accept: application/json
   celui du navigateur.
 - Un cache TanStack Query de 24 h limite les appels.
 
-## Limites connues (v0.1)
+## Limites connues (v1.0)
 
-- La ligne de type fournie par Scryfall reste en anglais ; elle est modifiable dans l'éditeur.
+- La ligne de type utilise en priorité `printed_type_line` localisé par Scryfall, avec repli sur la
+  version anglaise ; elle est modifiable dans l'éditeur.
 - Le PDF 9-up n'a pas encore été validé par un test d'impression réel sur papier.
 - Génération d'illustration IA reportée en v1.1.
 - Cartes double-face : seule la face avant est utilisée.
-- Pas de persistance entre les rechargements (hors préférences de template, variante et couleur de cadre).
-- Emballage Tauri (macOS/Windows/Linux) pas encore ajouté.
+- Hors ligne, seules les recherches Scryfall déjà consultées restent disponibles.
+- Sauvegardes locales liées au navigateur ; pas encore d'export/import vers un fichier.
+- Emballage Tauri (macOS/Windows/Linux) en backlog, si un besoin desktop concret apparaît.
 
 ## Structure
 
 ```
 src/
-├── components/      # recherche, aperçu, éditeur, upload
-├── hooks/           # debounce
-├── lib/             # client Scryfall, mana, export
+├── components/      # recherche, aperçu, éditeur, upload, sauvegardes
+├── hooks/           # debounce, persistance
+├── lib/             # client Scryfall, mana, export, stockage IndexedDB
 ├── store/           # état Zustand
 ├── App.tsx
 ├── index.css        # thème + rendu de la carte
 └── main.tsx
 scripts/smoke.mjs    # parcours E2E Playwright
+scripts/check-pwa.mjs # vérification du build PWA
+.github/workflows/deploy-pages.yml # déploiement GitHub Pages
 public/favicon.svg
+public/icons/        # icônes PWA et Apple
 PLAN.md              # plan d'implémentation et roadmap
 ```
+
+## Contribuer
+
+Le projet suit Gitflow : `master` (production), `develop` (intégration), et des branches
+`feature/<sujet>` ou `bugfix/<sujet>` créées depuis `develop`. Toute modification passe par une pull
+request vers `develop` (ou vers `master` pour `release/*` et `hotfix/*`), avec la CI verte
+(`typecheck`, tests, build).
+
+Le contrôle des noms de branche et des messages de commit est **non bloquant** : le workflow
+`Conventions` produit des avertissements, mais ne peut pas empêcher une fusion. Les tests de fumée
+Playwright (`npm run smoke`) et Lighthouse restent locaux car ils nécessitent un navigateur et un
+serveur.
+
+Le modèle de PR, les workflows et la checklist des réglages GitHub à appliquer manuellement sont
+dans [`.github/`](./.github/). Les conventions de commit (gitmoji + Conventional Commits), de
+vérification et de fusion (`--no-ff`) sont détaillées dans [`AGENTS.md`](./AGENTS.md).
 
 ## Impression
 

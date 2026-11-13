@@ -1,6 +1,14 @@
 import { create } from 'zustand';
 import type { AccentChoice, Artwork, CardData, CardTemplate, FrameStyle } from '../types';
 
+type CardSnapshot = {
+  card: CardData;
+  template: CardTemplate;
+  frame: FrameStyle;
+  accent: AccentChoice;
+  art: Artwork | null;
+};
+
 type CardStore = {
   card: CardData | null;
   template: CardTemplate;
@@ -13,6 +21,7 @@ type CardStore = {
   setFrame: (frame: FrameStyle) => void;
   setAccent: (accent: AccentChoice) => void;
   setArt: (art: Artwork | null) => void;
+  restore: (snapshot: CardSnapshot) => void;
   reset: () => void;
 };
 
@@ -38,6 +47,12 @@ function initialAccent(): AccentChoice {
   return ACCENT_VALUES.includes(stored as AccentChoice) ? (stored as AccentChoice) : 'auto';
 }
 
+function persistPreference(key: string, value: string): void {
+  if (typeof localStorage !== 'undefined') {
+    localStorage.setItem(key, value);
+  }
+}
+
 export const useCardStore = create<CardStore>()((set) => ({
   card: null,
   template: initialTemplate(),
@@ -51,27 +66,28 @@ export const useCardStore = create<CardStore>()((set) => ({
     set((state) => (state.card ? { card: { ...state.card, ...patch } } : state)),
 
   setTemplate: (template) => {
-    if (typeof localStorage !== 'undefined') {
-      localStorage.setItem(TEMPLATE_KEY, template);
-    }
+    persistPreference(TEMPLATE_KEY, template);
     set({ template });
   },
 
   setFrame: (frame) => {
-    if (typeof localStorage !== 'undefined') {
-      localStorage.setItem(FRAME_KEY, frame);
-    }
+    persistPreference(FRAME_KEY, frame);
     set({ frame });
   },
 
   setAccent: (accent) => {
-    if (typeof localStorage !== 'undefined') {
-      localStorage.setItem(ACCENT_KEY, accent);
-    }
+    persistPreference(ACCENT_KEY, accent);
     set({ accent });
   },
 
   setArt: (art) => set({ art }),
+
+  restore: (snapshot) => {
+    persistPreference(TEMPLATE_KEY, snapshot.template);
+    persistPreference(FRAME_KEY, snapshot.frame);
+    persistPreference(ACCENT_KEY, snapshot.accent);
+    set(snapshot);
+  },
 
   reset: () => set({ card: null, art: null }),
 }));
