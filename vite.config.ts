@@ -5,6 +5,18 @@ import { VitePWA } from 'vite-plugin-pwa';
 
 const SCRYFALL_API = /^https:\/\/api\.scryfall\.com\//;
 const DAY_SECONDS = 24 * 60 * 60;
+
+/**
+ * GitHub Pages serves project sites from /<repository>/, so the build must know
+ * its base path. Local development and root deployments keep '/'.
+ */
+function normalizeBase(value: string | undefined): string {
+  const raw = value?.trim() || '/';
+  const prefixed = raw.startsWith('/') ? raw : `/${raw}`;
+  return prefixed.endsWith('/') ? prefixed : `${prefixed}/`;
+}
+
+const base = normalizeBase(process.env.VITE_BASE);
 const MANA_FONT_CSS = /mana-font[\\/]css[\\/]mana\.min\.css$/;
 const MPLANTIN_FONT_FACE = /@font-face\{font-family:"MPlantin";[^}]*\}/g;
 const MPLANTIN_FONT_FAMILY = /font-family:"MPlantin, Garamond/g;
@@ -32,6 +44,7 @@ function stripMplantin(): Plugin {
 }
 
 export default defineConfig({
+  base,
   plugins: [
     stripMplantin(),
     react(),
@@ -39,23 +52,25 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       manifest: {
-        id: '/',
+        id: base,
         name: 'ProxySmith — Proxies Magic à votre image',
         short_name: 'ProxySmith',
         description:
           'Créez des proxies Magic: The Gathering avec vos propres illustrations, puis exportez-les en PNG 300 DPI ou en planche A4.',
         lang: 'fr',
-        start_url: '/',
-        scope: '/',
+        start_url: base,
+        scope: base,
         display: 'standalone',
         background_color: '#0f0e0c',
         theme_color: '#0f0e0c',
         categories: ['entertainment', 'utilities'],
         icons: [
-          { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
-          { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' },
+          // Relative to the manifest URL so the same build works at the root or
+          // under a GitHub Pages project sub-path.
+          { src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png' },
+          { src: 'icons/icon-512.png', sizes: '512x512', type: 'image/png' },
           {
-            src: '/icons/icon-maskable-512.png',
+            src: 'icons/icon-maskable-512.png',
             sizes: '512x512',
             type: 'image/png',
             purpose: 'maskable',
@@ -67,7 +82,7 @@ export default defineConfig({
         // mana-font embarque les mêmes glyphes en woff, ttf et svg : seul le
         // woff est utile aux navigateurs modernes (≈ 2,3 Mo évités).
         globIgnores: ['**/assets/mana-*.svg', '**/assets/mana-*.ttf'],
-        navigateFallback: '/index.html',
+        navigateFallback: 'index.html',
         cleanupOutdatedCaches: true,
         runtimeCaching: [
           {

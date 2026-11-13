@@ -15,15 +15,17 @@ function read(path) {
 
 if (!existsSync(DIST)) fail('dist/ absent : lancez `npm run build` avant `npm run check:pwa`');
 
+const base = process.env.VITE_BASE ?? '/';
 const manifest = JSON.parse(read(`${DIST}/manifest.webmanifest`).toString('utf8'));
 if (!manifest.name || !manifest.short_name) fail('nom du manifeste absent');
 if (manifest.display !== 'standalone') fail(`display inattendu : ${manifest.display}`);
 if (manifest.lang !== 'fr') fail(`langue inattendue : ${manifest.lang}`);
-if (manifest.start_url !== '/') fail(`start_url inattendu : ${manifest.start_url}`);
+if (manifest.start_url !== base) fail(`start_url inattendu : ${manifest.start_url}`);
+if (manifest.scope !== base) fail(`scope inattendu : ${manifest.scope}`);
 if (!Array.isArray(manifest.icons) || manifest.icons.length < 3) fail('icônes du manifeste absentes');
 
 for (const icon of manifest.icons) {
-  const file = `${DIST}${icon.src}`;
+  const file = `${DIST}/${icon.src.replace(/^\//, '')}`;
   const bytes = read(file);
   if (!bytes.subarray(0, 8).equals(PNG_SIGNATURE)) fail(`${file} n'est pas un PNG`);
 }
@@ -40,5 +42,5 @@ if (!sw.includes('precacheAndRoute')) fail('précache Workbox absent de sw.js');
 read(`${DIST}/registerSW.js`);
 
 console.log(
-  `PWA OK — ${manifest.icons.length} icônes, ${sw.length} octets de service worker, précache présent`,
+  `PWA OK — base ${base}, ${manifest.icons.length} icônes, ${sw.length} octets de service worker, précache présent`,
 );

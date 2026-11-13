@@ -27,8 +27,8 @@ génération IA arrivent après la v1.
 - Application mobile.
 - **Génération d'illustration IA** → reportée en v1.1. L'interface `ArtProvider` est conservée dans
   l'architecture pour brancher un provider (cloud ou ComfyUI local) sans refonte.
-- **Dessin intégré** → après l'emballage Tauri (lot 8), et avant la génération IA. Il réutilise
-  l'état `art` existant, donc aucun changement du recadrage ni des exports n'est nécessaire.
+- **Dessin intégré** → après la v1.0 (lot 8), et avant la génération IA. Il réutilise l'état `art`
+  existant, donc aucun changement du recadrage ni des exports n'est nécessaire.
 
 **Critères d'acceptation**
 
@@ -43,7 +43,7 @@ génération IA arrivent après la v1.
 
 ## 2. Stack recommandée
 
-**Web-first (PWA), emballage desktop ensuite**
+**Web-first (PWA hébergée), emballage desktop en backlog**
 
 | Brique | Choix | Pourquoi |
 |---|---|---|
@@ -55,13 +55,18 @@ génération IA arrivent après la v1.
 | Rendu carte | DOM/CSS à taille fixe + `html-to-image` | Itération rapide, export 300 DPI |
 | Export PDF | `pdf-lib` | Planches A4, traits de coupe, 100 % client |
 | PWA | `vite-plugin-pwa` | Installable + offline partiel |
+| Distribution | GitHub Pages (statique) | URL HTTPS, PWA installable, gratuite |
 | Tests | Vitest + Playwright + snapshots visuels | Non-régression du rendu |
-| Desktop (phase ultérieure) | Tauri 2 | Réutilise 100 % du front, binaire léger |
+| Desktop (backlog) | Tauri 2 | Réutilise 100 % du front, binaire léger |
 
-**Pourquoi web-first ici** : Node 22 est disponible, Rust/Cargo ne le sont pas encore. Le navigateur
-gère nativement l'impression et les fichiers, et la PWA couvre le besoin « sur mon ordinateur ».
-Tauri sera ajouté en phase 6 sans refonte (accès fichiers natif, raccourci bureau, keychain pour les clés API).
-Alternative si Tauri pose problème : Electron. Alternative si un backend devient nécessaire : Next.js.
+**Pourquoi web-first ici** : le navigateur gère nativement l'impression et les fichiers, la PWA
+hébergée en statique couvre l'installation et le partage à d'autres personnes, et aucune
+infrastructure serveur n'est nécessaire. L'emballage desktop (Tauri 2) passe en backlog : il ne sera
+rouvert que si un besoin concret apparaît (exécutable signé pour des tiers non techniques, accès
+systématique aux dossiers locaux, keychain pour la clé API de la v1.1). Il faudrait sinon revalider
+le rendu et les exports sur trois WebViews (WKWebView, WebView2, WebKitGTK) et maintenir la
+signature macOS/Windows. Alternative si Tauri pose problème : Electron. Alternative si un backend
+devient nécessaire : Next.js.
 
 **Structure de repo envisagée**
 
@@ -99,9 +104,11 @@ Endpoints utiles :
 
 Contraintes à respecter :
 
-- Headers obligatoires : `User-Agent: ProxySmith/0.1` et `Accept: application/json`.
-- Limite : **2 requêtes/s** sur `/cards/named` et `/cards/search` → debounce 500 ms + cache 24 h.
-- Gérer `404` (carte introuvable), `429` (backoff 30 s minimum), et les timeouts.
+- En navigateur, ne pas définir `User-Agent` (interdit par `fetch`) ; conserver
+  `Accept: application/json`.
+- Limite : **2 requêtes/s** sur `/cards/named` et `/cards/search` → debounce 450 ms, espacement
+  minimal de 500 ms et cache 24 h.
+- Gérer `404` (carte introuvable) et `429` (message explicite, pas de retry agressif).
 - Ne jamais relayer en masse les données Scryfall : l'app doit apporter de la valeur ajoutée.
 - Ne pas utiliser les images de cartes Scryfall dans les proxies.
 
@@ -185,21 +192,20 @@ ligne de collection (`PROXY · set · numéro`). Mention « PROXY » activée pa
 
 > Décision validée : la génération IA est reportée en v1.1. On garde dès maintenant l'interface
 > `ArtProvider` et le prompt builder dans le code, mais l'UI v1 n'expose que l'upload. Le dessin
-> intégré est décrit ci-dessous pour le lot 8, après l'emballage Tauri.
+> intégré est décrit ci-dessous pour le lot 8, après la v1.0.
 
 **Upload**
 
 - Drag & drop ou sélecteur, formats PNG/JPG/WebP, limite ~20 Mo.
 - Recadrage avec zoom/déplacement, ratio verrouillé sur la zone d'illustration.
-- Stockage en data URL dans l'état pour la v0.1 ; migration IndexedDB prévue avec la persistance.
-  L'image est embarquée dans le PNG exporté.
+- Stockage IndexedDB (session + sauvegardes nommées) depuis le lot 6. L'image est embarquée dans le
+  PNG exporté.
 
 ### Dessin intégré — post-v1 (lot 8)
 
-Un mode « Dessiner » est proposé à côté de l'import dans le panneau d'illustration, **après
-l'emballage Tauri et avant la génération IA**. Il permet de créer une illustration sans quitter
-l'application, avec les mêmes conséquences qu'un upload : la carte, le recadrage et les exports ne
-changent pas.
+Un mode « Dessiner » est proposé à côté de l'import dans le panneau d'illustration, **après la v1.0
+et avant la génération IA**. Il permet de créer une illustration sans quitter l'application, avec
+les mêmes conséquences qu'un upload : la carte, le recadrage et les exports ne changent pas.
 
 **Toile**
 
@@ -295,13 +301,16 @@ interface ArtProvider {
 | 4 | Upload + recadrage d'illustration | 1 j | ✅ |
 | 5 | Export PNG et PDF 9-up, traits de coupe, calibrage impression | 1 j | ✅ PNG + PDF livrés, test papier à faire |
 | 6 | PWA, sauvegarde locale, tests E2E, README, disclaimer | 1 j | ✅ PWA + persistance IndexedDB livrées |
-| 7 | Emballage Tauri | 1–2 j | ⏳ |
-| 8 | Dessin intégré : toile 2D, épaisseurs, palette, brosses, gomme, annuler/rétablir | 1–1,5 j | ⏳ après la v1, avant la génération IA (crayon optionnel : +0,5 j) |
-| **Total** | **MVP upload + impression** | **~7 j** | |
+| 6c | Export/import de la bibliothèque de proxies vers un fichier | 0,5 j | ⏳ après la v1.0 |
+| 7 | Emballage desktop Tauri | 1–2 j | ⏸ backlog (optionnel, si besoin réel) |
+| 7b | Distribution web : GitHub Pages, base PWA, workflow de déploiement | 0,5 j | ✅ |
+| 8 | Dessin intégré : toile 2D, épaisseurs, palette, brosses, gomme, annuler/rétablir | 1–1,5 j | ⏳ après la v1.0, avant la génération IA (crayon optionnel : +0,5 j) |
+| **Total** | **MVP web upload + impression** | **~7 j** | hors desktop, dessin et IA |
 
 Jalon démontrable dès le lot 2 : recherche → carte rendue sans artwork. ✅
 Jalon « imprimable » dès le lot 5 : PNG 300 DPI et planche PDF A4 9-up validés. ✅
-Test d'impression papier restant à faire.
+Test d'impression papier restant à faire, puis ajustements de dimensions si nécessaire.
+Jalon « partageable » au lot 7b : URL publique HTTPS, PWA installable et hors ligne. ✅
 Génération IA : +1,5 j en v1.1 (provider cloud ou ComfyUI local, mode démo, réglages clé API).
 
 ---
@@ -311,8 +320,10 @@ Génération IA : +1,5 j en v1.1 (provider cloud ou ComfyUI local, mode démo, r
 | Risque | Parade |
 |---|---|
 | Droits : texte oracle, symboles, cadres | Usage personnel, app gratuite, cadres originaux, mention PROXY, disclaimer, pas d'images officielles |
-| Scryfall 429 / indisponibilité | Debounce, cache 24 h, backoff, saisie manuelle en fallback, bulk data ensuite |
-| CORS / fuite de clé API en web | Proxy serverless ou Tauri ; ne jamais committer de clé |
+| Scryfall 429 / indisponibilité | Debounce, cache 24 h, message explicite, saisie manuelle en fallback, bulk data ensuite |
+| CORS / fuite de clé API en web (v1.1) | Provider compatible CORS ou mini-proxy serverless ; ne jamais committer de clé |
+| Données locales liées à l'origine | Export/import de la bibliothèque (lot 6c), documentation claire dans le README |
+| Rendu différent selon la WebView desktop | Tauri en backlog ; si rouvert, revalider l'aperçu et les exports sur les trois WebViews |
 | Texte long illisible | Auto-fit + tests visuels sur cartes extrêmes (ex. « Dance of the Dead ») |
 | Rendu écran ≠ impression | Même composant, export 300 DPI, test d'impression réel, traits de coupe |
 | Polices propriétaires | Uniquement OFL ; vérifier les licences avant embarquement |
@@ -334,22 +345,31 @@ des cartes officielles. L'artwork généré reste soumis aux conditions du provi
 1. Scaffold du projet + écran de recherche (lot 0). ✅
 2. Brancher Scryfall et afficher la première carte (lot 1). ✅
 3. Upload d'illustration + aperçu des trois templates (lots 2–4). ✅
-4. Faire un test d'impression réel de la planche PDF 9-up (lot 5).
-5. PWA installable et persistance locale des proxies (lot 6). ✅
-6. Emballage Tauri (lot 7).
-7. Dessin intégré dans le panneau d'illustration (lot 8) : toile 2D, épaisseurs, palette, gomme,
+4. PWA installable et persistance locale des proxies (lot 6). ✅
+5. Distribution web sur GitHub Pages (lot 7b) : URL publique, installation, hors ligne. ✅
+6. Faire un test d'impression réel de la planche PDF 9-up (lot 5), puis ajuster les dimensions.
+7. Release v1.0 (Gitflow `release/1.0.0` → `master`, tag, back-merge).
+8. Export/import de la bibliothèque de proxies (lot 6c).
+9. Dessin intégré dans le panneau d'illustration (lot 8) : toile 2D, épaisseurs, palette, gomme,
    annuler/rétablir.
-8. Génération d'illustration IA (v1.1).
+10. Génération d'illustration IA (v1.1).
+11. Backlog : emballage desktop Tauri (lot 7), si un besoin concret apparaît.
 
 ### Décisions validées
 
-- **Cible** : PWA web-first, puis Tauri 2 pour macOS/Windows/Linux.
+- **Cible** : PWA hébergée en statique sur GitHub Pages. Tauri 2 reste en backlog ; il ne sera
+  rouvert que pour un exécutable signé destiné à des tiers, un accès systématique aux dossiers ou le
+  keychain de la v1.1.
+- **Distribution** : build avec `VITE_BASE=/proxysmith/`, workflow `Deploy PWA` sur `master` et
+  déclenchement manuel. URL publique : <https://www.regulardesigner.com/proxysmith/> (domaine
+  personnalisé du site utilisateur GitHub Pages). Les données restent locales au navigateur et à
+  l'origine du site.
 - **PWA** : shell précaché et installable ; réponses Scryfall en cache 24 h (*network first*), aucune
   illustration utilisateur mise en cache par le service worker.
 - **Persistance** : restauration automatique de la session (carte, illustration, design) et
   bibliothèque de proxies nommées dans IndexedDB ; l'image est stockée séparément des métadonnées.
 - **Génération d'art** : upload uniquement en v1 ; génération IA reportée en v1.1 (interface prête).
-- **Dessin intégré** : hors v1, lot 8 après l'emballage Tauri et avant la génération IA. Outil basic
+- **Dessin intégré** : hors v1, lot 8 après la v1.0 et avant la génération IA. Outil basic
   (stylo, feutre, gomme ; crayon optionnel), toile au ratio de la fenêtre d'art, palette issue de
   `cardTheme.ts`, rasterisation PNG réutilisant l'état `art` existant pour ne pas toucher au
   recadrage ni aux exports.
