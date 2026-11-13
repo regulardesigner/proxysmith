@@ -170,7 +170,7 @@ Accept: application/json
   celui du navigateur.
 - Un cache TanStack Query de 24 h limite les appels.
 
-## Limites connues (v0.1)
+## Limites connues (v1.0)
 
 - La ligne de type utilise en priorité `printed_type_line` localisé par Scryfall, avec repli sur la
   version anglaise ; elle est modifiable dans l'éditeur.
