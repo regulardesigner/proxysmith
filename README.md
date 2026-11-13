@@ -30,6 +30,8 @@ illustration** — aucun artwork officiel n'est récupéré ni affiché.
 - **Sauvegarde locale** automatique de la carte en cours et bibliothèque de proxies nommées
   (IndexedDB), illustrations comprises.
 
+**En ligne** : <https://regulardesigner.github.io/proxysmith/> — installable et utilisable hors ligne.
+
 ## Démarrage
 
 Prérequis : Node.js 22+ (`.nvmrc` fourni ; `nvm use` pour aligner la version locale).
@@ -59,13 +61,7 @@ présence de l'illustration dans l'export, le PNG 300 DPI et la planche PDF A4. 
 
 ## PWA et hors ligne
 
-Le build de production génère un manifeste, des icônes et un service worker (`vite-plugin-pwa` +
-Workbox). Pour tester l'installation et le mode hors ligne :
-
-```bash
-npm run build
-npm run preview   # http://localhost:4173
-```
+L'application est publiée sur GitHub Pages : **https://regulardesigner.github.io/proxysmith/**.
 
 - Chrome/Edge : icône d'installation dans la barre d'adresse. Safari/iOS : **Partager → Sur l'écran
   d'accueil**.
@@ -74,8 +70,20 @@ npm run preview   # http://localhost:4173
 - Les recherches Scryfall déjà consultées sont conservées 24 h (stratégie *network first*, 50
   entrées). Une recherche jamais effectuée nécessite le réseau.
 - Les illustrations importées ne sont jamais mises en cache par le service worker.
-- Le serveur de développement n'enregistre pas de service worker : l'installation et le mode hors
-  ligne se vérifient avec `npm run preview`.
+- Les données locales (sauvegardes, session) sont liées à l'origine : `localhost`, le preview et le
+  site GitHub Pages utilisent trois stockages IndexedDB distincts.
+
+Le build local reproduit le sous-chemin de GitHub Pages (`/proxysmith/`) avec `VITE_BASE` :
+
+```bash
+VITE_BASE=/proxysmith/ npm run build
+VITE_BASE=/proxysmith/ npm run preview   # http://localhost:4173/proxysmith/
+```
+
+Sans `VITE_BASE`, le build reste servi à la racine (`/`) comme avant. Le workflow
+`.github/workflows/deploy-pages.yml` construit et déploie automatiquement sur `master`, ou à la
+demande via `workflow_dispatch`. Le serveur de développement n'enregistre pas de service worker :
+l'installation et le mode hors ligne se vérifient avec `npm run preview`.
 
 ## Sauvegarde locale
 
@@ -168,7 +176,7 @@ Accept: application/json
 - Cartes double-face : seule la face avant est utilisée.
 - Hors ligne, seules les recherches Scryfall déjà consultées restent disponibles.
 - Sauvegardes locales liées au navigateur ; pas encore d'export/import vers un fichier.
-- Emballage Tauri (macOS/Windows/Linux) pas encore ajouté.
+- Emballage Tauri (macOS/Windows/Linux) en backlog, si un besoin desktop concret apparaît.
 
 ## Structure
 
@@ -183,6 +191,7 @@ src/
 └── main.tsx
 scripts/smoke.mjs    # parcours E2E Playwright
 scripts/check-pwa.mjs # vérification du build PWA
+.github/workflows/deploy-pages.yml # déploiement GitHub Pages
 public/favicon.svg
 public/icons/        # icônes PWA et Apple
 PLAN.md              # plan d'implémentation et roadmap

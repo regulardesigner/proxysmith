@@ -19,8 +19,9 @@ Product invariants:
 - Outputs: **PNG 750 × 1050 px at 300 DPI** (63.5 × 88.9 mm) and **A4 9-up PDF** with crop marks.
 - 100% client-side: no account, no backend, no analytics. The only network call is Scryfall.
 
-Status: local MVP with an installable PWA shell and IndexedDB persistence. Tauri 2 and AI
-illustration generation are planned in `PLAN.md`; do not implement them without an explicit request.
+Status: MVP published as a static PWA on GitHub Pages, with IndexedDB persistence. Tauri packaging
+(backlog) and AI illustration generation (v1.1) are planned in `PLAN.md`; do not implement them
+without an explicit request.
 
 ## Commands
 
@@ -37,6 +38,7 @@ npm run preview              # serve the production build (Lighthouse, PWA)
 npm run smoke                # Playwright E2E flow, dev server required
 npm run check:pwa            # verify the generated manifest, icons and service worker
 npm run check:conventions    # warning-only branch/commit naming check
+VITE_BASE=/proxysmith/ npm run build   # reproduce the GitHub Pages sub-path
 ```
 
 - Node.js 22+ (`.nvmrc` is provided; run `nvm use` if you use nvm).
@@ -488,13 +490,23 @@ IndexedDB (database `proxysmith`, version 1):
 
 ## PWA
 
+- The app is published at <https://regulardesigner.github.io/proxysmith/>. This is a GitHub Pages
+  **project site**, so the production base path is `/proxysmith/`.
 - `vite-plugin-pwa` generates the manifest, icons, service worker, and precache at build time.
-- The service worker is disabled in development (`devOptions.enabled: false`); installability and
-  offline mode are tested with `npm run build && npm run preview`, never on the Vite dev server.
+- `VITE_BASE` controls the base path and is normalized to a leading and trailing slash. It defaults
+  to `/`; only `.github/workflows/deploy-pages.yml` sets `/proxysmith/`. Never hardcode the
+  repository name in application code.
+- Reference public files from `index.html` with `%BASE_URL%`. Manifest icons stay **relative** to the
+  manifest URL. Absolute `/…` paths break the Pages build.
 - The app shell is precached. Scryfall JSON uses a *network first* runtime cache (24 h, 50 entries).
   Never precache user illustrations.
-- `npm run check:pwa` runs after `npm run build` in CI and fails if the manifest, icons, or service
-  worker output is missing.
+- The service worker is disabled in development (`devOptions.enabled: false`); installability and
+  offline mode are tested with `npm run build && npm run preview`, never on the Vite dev server.
+- `npm run check:pwa` runs after `npm run build` in CI and fails if the manifest, icons, start URL,
+  scope, or service worker output is missing or inconsistent with `VITE_BASE`.
+- `.github/workflows/deploy-pages.yml` publishes on every push to `master` and on manual
+  `workflow_dispatch` (useful for a preview deploy from `develop`). Pages must use **GitHub Actions**
+  as its source.
 
 ## Known pitfalls
 
@@ -502,6 +514,10 @@ IndexedDB (database `proxysmith`, version 1):
 - `npm run smoke` fails if the server is not on port 5173.
 - The service worker does not exist on the dev server; a stale cached build only reproduces with
   `npm run preview` (use a private window or unregister the service worker).
+- `VITE_BASE` must be identical for `build`, `preview`, and `check:pwa`; otherwise the manifest,
+  icons, and service worker are requested from the wrong path.
+- IndexedDB is scoped to the origin: `localhost`, a local preview, and the GitHub Pages URL have
+  separate stores. Saves do not travel between them.
 - IndexedDB hydration is asynchronous: never write the session before it resolves, and never let a
   late restore overwrite a card the user already selected.
 - Autosave compares the artwork `dataUrl` before writing the image; writing it on every card
