@@ -490,8 +490,10 @@ IndexedDB (database `proxysmith`, version 1):
 
 ## PWA
 
-- The app is published at <https://regulardesigner.github.io/proxysmith/>. This is a GitHub Pages
-  **project site**, so the production base path is `/proxysmith/`.
+- The app is published at <https://www.regulardesigner.com/proxysmith/>. This is a GitHub Pages
+  **project site** served through the account's custom domain (the `*.github.io` URL redirects), so
+  the production base path stays `/proxysmith/`. Do not add a `CNAME` file to this repository: the
+  domain is configured on the user site.
 - `vite-plugin-pwa` generates the manifest, icons, service worker, and precache at build time.
 - `VITE_BASE` controls the base path and is normalized to a leading and trailing slash. It defaults
   to `/`; only `.github/workflows/deploy-pages.yml` sets `/proxysmith/`. Never hardcode the

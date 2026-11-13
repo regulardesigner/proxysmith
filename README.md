@@ -30,7 +30,7 @@ illustration** — aucun artwork officiel n'est récupéré ni affiché.
 - **Sauvegarde locale** automatique de la carte en cours et bibliothèque de proxies nommées
   (IndexedDB), illustrations comprises.
 
-**En ligne** : <https://regulardesigner.github.io/proxysmith/> — installable et utilisable hors ligne.
+**En ligne** : <https://www.regulardesigner.com/proxysmith/> — installable et utilisable hors ligne.
 
 ## Démarrage
 
@@ -61,7 +61,10 @@ présence de l'illustration dans l'export, le PNG 300 DPI et la planche PDF A4. 
 
 ## PWA et hors ligne
 
-L'application est publiée sur GitHub Pages : **https://regulardesigner.github.io/proxysmith/**.
+L'application est publiée sur GitHub Pages : **https://www.regulardesigner.com/proxysmith/**.
+Le domaine personnalisé du site utilisateur s'applique aussi aux sites de projet ; l'URL
+`https://regulardesigner.github.io/proxysmith/` redirige vers le domaine personnalisé. Le chemin
+reste `/proxysmith/`.
 
 - Chrome/Edge : icône d'installation dans la barre d'adresse. Safari/iOS : **Partager → Sur l'écran
   d'accueil**.

@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
-      # GitHub Pages project site: https://<owner>.github.io/proxysmith/
+      # GitHub Pages project site: https://www.regulardesigner.com/proxysmith/
       VITE_BASE: /proxysmith/
     steps:
       - name: Check out the repository

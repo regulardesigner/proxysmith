@@ -361,7 +361,9 @@ des cartes officielles. L'artwork généré reste soumis aux conditions du provi
   rouvert que pour un exécutable signé destiné à des tiers, un accès systématique aux dossiers ou le
   keychain de la v1.1.
 - **Distribution** : build avec `VITE_BASE=/proxysmith/`, workflow `Deploy PWA` sur `master` et
-  déclenchement manuel. Les données restent locales au navigateur et à l'origine du site.
+  déclenchement manuel. URL publique : <https://www.regulardesigner.com/proxysmith/> (domaine
+  personnalisé du site utilisateur GitHub Pages). Les données restent locales au navigateur et à
+  l'origine du site.
 - **PWA** : shell précaché et installable ; réponses Scryfall en cache 24 h (*network first*), aucune
   illustration utilisateur mise en cache par le service worker.
 - **Persistance** : restauration automatique de la session (carte, illustration, design) et
